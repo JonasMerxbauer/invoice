@@ -9,6 +9,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@evolu/common": "^7.4.1",
+    "@evolu/react": "^10.4.0",
+    "@evolu/react-web": "^2.4.0",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
