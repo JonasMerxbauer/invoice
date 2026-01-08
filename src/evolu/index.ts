@@ -1,4 +1,4 @@
-import { Schema } from "@/evolu/schema";
+import { Schema } from "~/evolu/schema";
 import { SimpleName, createEvolu } from "@evolu/common";
 import { evoluReactWebDeps } from "@evolu/react-web";
 import { createUseEvolu } from "@evolu/react";
