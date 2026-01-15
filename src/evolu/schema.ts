@@ -5,6 +5,12 @@ import * as Evolu from "@evolu/common";
 const TodoId = Evolu.id("Todo");
 type TodoId = typeof TodoId.Type;
 
+const ProjectId = Evolu.id("Project");
+type ProjectId = typeof ProjectId.Type;
+
+const InvoiceId = Evolu.id("Invoice");
+type InvoiceId = typeof InvoiceId.Type;
+
 // Schema defines database structure with runtime validation.
 // Column types validate data on insert/update/upsert.
 export const Schema = {
@@ -14,5 +20,16 @@ export const Schema = {
     title: Evolu.NonEmptyString100,
     // SQLite doesn't support the boolean type; it uses 0 and 1 instead.
     isCompleted: Evolu.nullOr(Evolu.SqliteBoolean),
+  },
+  project: {
+    id: ProjectId,
+    name: Evolu.NonEmptyString100,
+  },
+  invoice: {
+    id: InvoiceId,
+    projectId: ProjectId,
+    amount: Evolu.NonNegativeNumber,
+    dueDate: Evolu.Date,
+    status: Evolu.NonEmptyString100,
   },
 };
