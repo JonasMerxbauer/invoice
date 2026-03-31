@@ -874,6 +874,10 @@ function NewInvoiceComponent() {
         return;
       }
 
+      const selectedCustomer = projectCustomers.find(
+        (customer) => customer.id === value.customerId,
+      );
+
       try {
         const invoiceResult = insert("invoice", {
           projectId: project.id,
@@ -894,6 +898,24 @@ function NewInvoiceComponent() {
           vatTotal: validation.vatTotal,
           total: validation.total,
           note: value.note.trim() || null,
+          supplierCompanyName: project.companyName,
+          supplierIco: project.ico,
+          supplierDic: project.dic,
+          supplierVatId: project.vatId,
+          supplierStreet: project.street,
+          supplierCity: project.city,
+          supplierPostalCode: project.postalCode,
+          supplierCountry: project.country,
+          supplierBankAccount: project.bankAccount,
+          supplierIban: project.iban,
+          supplierSwift: project.swift,
+          customerName: selectedCustomer?.name ?? null,
+          customerCompanyName: selectedCustomer?.companyName ?? null,
+          customerIco: selectedCustomer?.ico ?? null,
+          customerDic: selectedCustomer?.dic ?? null,
+          customerStreet: selectedCustomer?.street ?? null,
+          customerCity: selectedCustomer?.city ?? null,
+          customerPostalCode: selectedCustomer?.postalCode ?? null,
         } as any);
 
         if (!invoiceResult.ok) {

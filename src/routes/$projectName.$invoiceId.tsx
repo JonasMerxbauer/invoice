@@ -50,10 +50,6 @@ const allInvoiceItems = evolu.createQuery((db) =>
     .orderBy("sortOrder", "asc"),
 );
 
-const allCustomers = evolu.createQuery((db) =>
-  db.selectFrom("customer").selectAll().where("isDeleted", "is", null),
-);
-
 const allProjects = evolu.createQuery((db) =>
   db.selectFrom("project").selectAll().where("isDeleted", "is", null),
 );
@@ -160,7 +156,6 @@ function InvoiceDetailComponent() {
 
   const invoices = useQuery(allInvoices);
   const invoiceItems = useQuery(allInvoiceItems);
-  const customers = useQuery(allCustomers);
   const projects = useQuery(allProjects);
 
   const invoice = useMemo(
@@ -174,14 +169,6 @@ function InvoiceDetailComponent() {
         ? invoiceItems.filter((item) => item.invoiceId === invoice.id)
         : [],
     [invoiceItems, invoice],
-  );
-
-  const customer = useMemo(
-    () =>
-      invoice?.customerId
-        ? customers.find((c) => c.id === invoice.customerId)
-        : null,
-    [customers, invoice],
   );
 
   const project = useMemo(
@@ -232,6 +219,24 @@ function InvoiceDetailComponent() {
   const status = (invoice.status as InvoiceStatus) ?? "draft";
   const config = statusConfig[status] ?? statusConfig.draft;
   const currencyStr = invoice.currency ?? "CZK";
+
+  // Snapshot fields are always populated — use them directly.
+  const supplierCompanyName = invoice.supplierCompanyName;
+  const supplierIco = invoice.supplierIco;
+  const supplierDic = invoice.supplierDic;
+  const supplierStreet = invoice.supplierStreet;
+  const supplierCity = invoice.supplierCity;
+  const supplierPostalCode = invoice.supplierPostalCode;
+  const supplierBankAccount = invoice.supplierBankAccount;
+  const supplierIban = invoice.supplierIban;
+  const supplierSwift = invoice.supplierSwift;
+  const customerName = invoice.customerName;
+  const customerCompanyName = invoice.customerCompanyName;
+  const customerIco = invoice.customerIco;
+  const customerDic = invoice.customerDic;
+  const customerStreet = invoice.customerStreet;
+  const customerCity = invoice.customerCity;
+  const customerPostalCode = invoice.customerPostalCode;
 
   return (
     <div>
@@ -287,23 +292,23 @@ function InvoiceDetailComponent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <p className="font-serif font-semibold">{project?.companyName}</p>
-            {project?.ico && (
+            <p className="font-serif font-semibold">{supplierCompanyName}</p>
+            {supplierIco && (
               <p className="text-xs font-mono text-muted-foreground">
-                IČO: {project.ico}
+                IČO: {supplierIco}
               </p>
             )}
-            {project?.dic && (
+            {supplierDic && (
               <p className="text-xs font-mono text-muted-foreground">
-                DIČ: {project.dic}
+                DIČ: {supplierDic}
               </p>
             )}
-            {project?.street && (
-              <p className="text-sm text-muted-foreground">{project.street}</p>
+            {supplierStreet && (
+              <p className="text-sm text-muted-foreground">{supplierStreet}</p>
             )}
-            {(project?.city || project?.postalCode) && (
+            {(supplierCity || supplierPostalCode) && (
               <p className="text-sm text-muted-foreground">
-                {project?.postalCode} {project?.city}
+                {supplierPostalCode} {supplierCity}
               </p>
             )}
           </CardContent>
@@ -318,32 +323,32 @@ function InvoiceDetailComponent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            {customer ? (
+            {customerName ? (
               <>
-                <p className="font-serif font-semibold">{customer.name}</p>
-                {customer.companyName && (
+                <p className="font-serif font-semibold">{customerName}</p>
+                {customerCompanyName && (
                   <p className="text-sm text-muted-foreground">
-                    {customer.companyName}
+                    {customerCompanyName}
                   </p>
                 )}
-                {customer.ico && (
+                {customerIco && (
                   <p className="text-xs font-mono text-muted-foreground">
-                    IČO: {customer.ico}
+                    IČO: {customerIco}
                   </p>
                 )}
-                {customer.dic && (
+                {customerDic && (
                   <p className="text-xs font-mono text-muted-foreground">
-                    DIČ: {customer.dic}
+                    DIČ: {customerDic}
                   </p>
                 )}
-                {customer.street && (
+                {customerStreet && (
                   <p className="text-sm text-muted-foreground">
-                    {customer.street}
+                    {customerStreet}
                   </p>
                 )}
-                {(customer.city || customer.postalCode) && (
+                {(customerCity || customerPostalCode) && (
                   <p className="text-sm text-muted-foreground">
-                    {customer.postalCode} {customer.city}
+                    {customerPostalCode} {customerCity}
                   </p>
                 )}
               </>
@@ -364,22 +369,22 @@ function InvoiceDetailComponent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            {project?.bankAccount && (
+            {supplierBankAccount && (
               <p className="text-sm">
                 <span className="text-muted-foreground text-xs">Účet: </span>
-                <span className="font-mono">{project.bankAccount}</span>
+                <span className="font-mono">{supplierBankAccount}</span>
               </p>
             )}
-            {project?.iban && (
+            {supplierIban && (
               <p className="text-sm">
                 <span className="text-muted-foreground text-xs">IBAN: </span>
-                <span className="font-mono">{project.iban}</span>
+                <span className="font-mono">{supplierIban}</span>
               </p>
             )}
-            {project?.swift && (
+            {supplierSwift && (
               <p className="text-sm">
                 <span className="text-muted-foreground text-xs">SWIFT: </span>
-                <span className="font-mono">{project.swift}</span>
+                <span className="font-mono">{supplierSwift}</span>
               </p>
             )}
             {invoice.variableSymbol && (
@@ -400,8 +405,8 @@ function InvoiceDetailComponent() {
                 <span className="font-mono">{invoice.specificSymbol}</span>
               </p>
             )}
-            {!project?.bankAccount &&
-              !project?.iban &&
+            {!supplierBankAccount &&
+              !supplierIban &&
               !invoice.variableSymbol && (
                 <p className="text-sm text-muted-foreground italic">
                   Žádné platební údaje

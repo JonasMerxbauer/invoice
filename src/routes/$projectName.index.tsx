@@ -27,10 +27,6 @@ const allInvoices = evolu.createQuery((db) =>
     .orderBy("issueDate", "desc"),
 );
 
-const allCustomers = evolu.createQuery((db) =>
-  db.selectFrom("customer").selectAll().where("isDeleted", "is", null),
-);
-
 export const Route = createFileRoute("/$projectName/")({
   component: RouteComponent,
 });
@@ -92,7 +88,6 @@ function RouteComponent() {
   const decodedName = decodeURIComponent(projectName);
   const projects = useQuery(allProjects);
   const invoices = useQuery(allInvoices);
-  const customers = useQuery(allCustomers);
 
   // Find the project by name
   const project = useMemo(
@@ -107,12 +102,6 @@ function RouteComponent() {
         ? invoices.filter((inv) => inv.projectId === project.id)
         : [],
     [invoices, project],
-  );
-
-  // Build customer lookup map
-  const customerMap = useMemo(
-    () => new Map(customers.map((c) => [c.id, c])),
-    [customers],
   );
 
   if (!project) {
@@ -258,9 +247,6 @@ function RouteComponent() {
             </TableHeader>
             <TableBody>
               {projectInvoices.map((invoice) => {
-                const customer = invoice.customerId
-                  ? customerMap.get(invoice.customerId)
-                  : null;
                 const status = (invoice.status as InvoiceStatus) ?? "draft";
                 const config = statusConfig[status] ?? statusConfig.draft;
 
@@ -280,7 +266,7 @@ function RouteComponent() {
                       </Link>
                     </TableCell>
                     <TableCell className="font-serif text-sm">
-                      {customer?.name ?? (
+                      {invoice.customerName ?? (
                         <span className="text-muted-foreground italic">
                           --
                         </span>
