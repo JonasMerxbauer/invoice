@@ -244,7 +244,7 @@ function NewCustomerDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <TextField
-              label="IČ"
+              label="IČO"
               value={customerValues.ico}
               onChange={(e) => customerForm.setFieldValue("ico", e.target.value)}
               placeholder="12345678"
@@ -478,7 +478,7 @@ const customerFormSchema = z.object({
     .min(1, "Název je povinný.")
     .max(100, "Název může mít max. 100 znaků."),
   companyName: z.string().trim().max(100, "Název společnosti může mít max. 100 znaků."),
-  ico: z.string().trim().max(16, "IČ může mít max. 16 znaků."),
+  ico: z.string().trim().max(16, "IČO může mít max. 16 znaků."),
   dic: z.string().trim().max(20, "DIČ může mít max. 20 znaků."),
   street: z.string().trim().max(100, "Ulice může mít max. 100 znaků."),
   city: z.string().trim().max(100, "Město může mít max. 100 znaků."),

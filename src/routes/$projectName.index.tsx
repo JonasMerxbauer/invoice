@@ -152,7 +152,7 @@ function RouteComponent() {
             {project.companyName}
             {project.ico && (
               <span className="ml-2 font-mono text-xs">
-                IČ: {project.ico}
+                IČO: {project.ico}
               </span>
             )}
           </p>

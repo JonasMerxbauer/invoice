@@ -290,7 +290,7 @@ function InvoiceDetailComponent() {
             <p className="font-serif font-semibold">{project?.companyName}</p>
             {project?.ico && (
               <p className="text-xs font-mono text-muted-foreground">
-                IČ: {project.ico}
+                IČO: {project.ico}
               </p>
             )}
             {project?.dic && (
@@ -328,7 +328,7 @@ function InvoiceDetailComponent() {
                 )}
                 {customer.ico && (
                   <p className="text-xs font-mono text-muted-foreground">
-                    IČ: {customer.ico}
+                    IČO: {customer.ico}
                   </p>
                 )}
                 {customer.dic && (
