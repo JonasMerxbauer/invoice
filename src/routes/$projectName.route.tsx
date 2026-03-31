@@ -1,6 +1,5 @@
 import { createFileRoute, useMatchRoute } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
-import { SlashIcon } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,17 +22,21 @@ function RouteComponent() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href={`/${projectName}/`}>
+            <BreadcrumbLink
+              className="font-bold text-xl"
+              href={`/${projectName}/`}
+            >
               ${projectName}
             </BreadcrumbLink>
           </BreadcrumbItem>
           {invoiceId && (
             <>
-              <BreadcrumbSeparator>
-                <SlashIcon />
-              </BreadcrumbSeparator>
+              <BreadcrumbSeparator className="[&>svg]:size-6" />
               <BreadcrumbItem>
-                <BreadcrumbLink href={`/${projectName}/${invoiceId}/`}>
+                <BreadcrumbLink
+                  className="font-bold text-xl"
+                  href={`/${projectName}/${invoiceId}/`}
+                >
                   ${invoiceId}
                 </BreadcrumbLink>
               </BreadcrumbItem>
