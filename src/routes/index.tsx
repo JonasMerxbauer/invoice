@@ -6,31 +6,64 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useState } from "react";
 
-const allTodos = evolu.createQuery((db) => db.selectFrom("todo").selectAll());
+const allProjects = evolu.createQuery((db) =>
+  db.selectFrom("project").selectAll().orderBy("name", "asc"),
+);
 
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
-  const [title, setTitle] = useState("");
-  const todos = useQuery(allTodos);
+  const [projectName, setProjectName] = useState("");
+  const projects = useQuery(allProjects);
 
   const { insert } = useEvolu();
 
   const handleInsert = () => {
-    insert("todo", {
-      title: title,
-      isCompleted: Evolu.sqliteFalse,
+    const trimmedName = projectName.trim();
+    if (!trimmedName) return;
+
+    insert("project", {
+      name: trimmedName,
+      companyName: trimmedName,
+      vatMode: "standard",
+      isVatPayer: Evolu.sqliteFalse,
+      defaultCurrency: "CZK",
     });
+
+    setProjectName("");
   };
+
   return (
     <div className="min-h-screen flex flex-col gap-2 justify-center items-center">
-      <div className="flex gap-2">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Button onClick={handleInsert}>Add Todo</Button>
+      <div className="flex flex-col gap-4 w-full max-w-md">
+        <div className="flex gap-2">
+          <Input
+            placeholder="New project name"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+          />
+          <Button onClick={handleInsert}>Add Project</Button>
+        </div>
+        <div className="space-y-2">
+          {projects.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              No projects yet. Create one to start invoicing.
+            </div>
+          ) : (
+            projects.map((project) => (
+              <div
+                key={project.id}
+                className="rounded-md border px-3 py-2 text-sm"
+              >
+                <div className="font-medium">{project.name}</div>
+                <div className="text-muted-foreground">
+                  {project.defaultCurrency} - {project.vatMode}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-      {todos.map((todo) => (
-        <div key={todo.id}>{todo.title}</div>
-      ))}
     </div>
   );
 }
