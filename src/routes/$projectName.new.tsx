@@ -1489,7 +1489,7 @@ function NewInvoiceComponent() {
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         value={item.quantity}
                         onChange={(e) =>
                           updateItem(index, "quantity", e.target.value)
@@ -1515,7 +1515,7 @@ function NewInvoiceComponent() {
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         value={item.unitPrice}
                         onChange={(e) =>
                           updateItem(index, "unitPrice", e.target.value)
