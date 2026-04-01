@@ -36,6 +36,7 @@ import { cn } from "~/lib/utils";
 import { z } from "zod";
 import { AlertCircle, Plus, Trash2, Save, UserPlus } from "lucide-react";
 import {
+  useEffect,
   useState,
   useMemo,
   useCallback,
@@ -95,6 +96,18 @@ function calcLineItem(item: LineItem, applyVat = true) {
   const vatAmount = subtotal * (vat / 100);
   const total = subtotal + vatAmount;
   return { subtotal, vatAmount, total };
+}
+
+function getEffectiveInvoiceValues(
+  values: InvoiceFormValues,
+  applyVat: boolean,
+): InvoiceFormValues {
+  if (applyVat) return values;
+
+  return {
+    ...values,
+    taxableSupplyDate: values.issueDate,
+  };
 }
 
 // ── New Customer Dialog ──────────────────────────────────────────────
@@ -817,16 +830,18 @@ function DatePickerField({
   value,
   onChange,
   invalid,
+  className,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   invalid?: boolean;
+  className?: string;
 }) {
   const selectedDate = parseIsoDate(value);
 
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", className)}>
       <Label className="text-xs font-mono uppercase tracking-wider">
         {label} *
       </Label>
@@ -901,6 +916,8 @@ function NewInvoiceComponent() {
     onSubmit: async ({ value }) => {
       if (!project) return;
 
+      const effectiveValue = getEffectiveInvoiceValues(value, applyVat);
+
       const projectVatMode: InvoiceFormValues["vatMode"] =
         project.vatMode === "none" ||
         project.vatMode === "standard" ||
@@ -908,8 +925,9 @@ function NewInvoiceComponent() {
           ? project.vatMode
           : "standard";
 
-      const effectiveInvoiceNumber = value.invoiceNumber || nextInvoiceNumber;
-      const totals = value.items.reduce(
+      const effectiveInvoiceNumber =
+        effectiveValue.invoiceNumber || nextInvoiceNumber;
+      const totals = effectiveValue.items.reduce(
         (acc, item) => {
           const calc = calcLineItem(item, applyVat);
           return {
@@ -921,7 +939,7 @@ function NewInvoiceComponent() {
         { subtotal: 0, vatTotal: 0, total: 0 },
       );
       const validation = validateInvoiceForm(
-        value,
+        effectiveValue,
         effectiveInvoiceNumber,
         projectVatMode,
         true,
@@ -943,13 +961,13 @@ function NewInvoiceComponent() {
       }
 
       const selectedCustomer = projectCustomers.find(
-        (customer) => customer.id === value.customerId,
+        (customer) => customer.id === effectiveValue.customerId,
       );
 
       try {
         const invoiceResult = insert("invoice", {
           projectId: project.id,
-          customerId: value.customerId as any,
+          customerId: effectiveValue.customerId as any,
           paymentMethodId: null,
           invoiceNumber: validation.invoiceNumber,
           issueDate: validation.issueDate,
@@ -957,15 +975,15 @@ function NewInvoiceComponent() {
           dueDate: validation.dueDate,
           paidDate: null,
           status: "draft",
-          currency: value.currency as Evolu.CurrencyCode,
+          currency: effectiveValue.currency as Evolu.CurrencyCode,
           vatMode: project.vatMode,
-          variableSymbol: value.variableSymbol.trim() || null,
-          constantSymbol: value.constantSymbol.trim() || null,
-          specificSymbol: value.specificSymbol.trim() || null,
+          variableSymbol: effectiveValue.variableSymbol.trim() || null,
+          constantSymbol: effectiveValue.constantSymbol.trim() || null,
+          specificSymbol: effectiveValue.specificSymbol.trim() || null,
           subtotal: validation.subtotal,
           vatTotal: validation.vatTotal,
           total: validation.total,
-          note: value.note.trim() || null,
+          note: effectiveValue.note.trim() || null,
           supplierCompanyName: project.companyName,
           supplierIco: project.ico,
           supplierDic: project.dic,
@@ -1039,6 +1057,13 @@ function NewInvoiceComponent() {
   const [nextKey, setNextKey] = useState(2);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+
+  useEffect(() => {
+    if (applyVat) return;
+    if (formValues.taxableSupplyDate === formValues.issueDate) return;
+
+    form.setFieldValue("taxableSupplyDate", formValues.issueDate);
+  }, [applyVat, form, formValues.issueDate, formValues.taxableSupplyDate]);
 
   // Customer dialog
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
@@ -1305,28 +1330,37 @@ function NewInvoiceComponent() {
           <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-4">
             Data
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-4",
+              applyVat ? "sm:grid-cols-3" : "sm:grid-cols-2 sm:max-w-2xl",
+            )}
+          >
             <DatePickerField
               label="Datum vystavení"
               value={formValues.issueDate}
               onChange={(value) => form.setFieldValue("issueDate", value)}
               invalid={hasAttemptedSave && saveValidation.issueDateInvalid}
+              className={!applyVat ? "sm:max-w-xs" : undefined}
             />
-            <DatePickerField
-              label="Datum zdanitelného plnění"
-              value={formValues.taxableSupplyDate}
-              onChange={(value) =>
-                form.setFieldValue("taxableSupplyDate", value)
-              }
-              invalid={
-                hasAttemptedSave && saveValidation.taxableSupplyDateInvalid
-              }
-            />
+            {applyVat && (
+              <DatePickerField
+                label="Datum zdanitelného plnění"
+                value={formValues.taxableSupplyDate}
+                onChange={(value) =>
+                  form.setFieldValue("taxableSupplyDate", value)
+                }
+                invalid={
+                  hasAttemptedSave && saveValidation.taxableSupplyDateInvalid
+                }
+              />
+            )}
             <DatePickerField
               label="Datum splatnosti"
               value={formValues.dueDate}
               onChange={(value) => form.setFieldValue("dueDate", value)}
               invalid={hasAttemptedSave && saveValidation.dueDateInvalid}
+              className={!applyVat ? "sm:max-w-xs" : undefined}
             />
           </div>
         </section>
