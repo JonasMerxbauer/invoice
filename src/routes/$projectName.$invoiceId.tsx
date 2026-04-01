@@ -209,6 +209,7 @@ function InvoiceDetailComponent() {
   const status = (invoice.status as InvoiceStatus) ?? "draft";
   const config = statusConfig[status] ?? statusConfig.draft;
   const currencyStr = invoice.currency ?? "CZK";
+  const showVatMeta = invoice.vatMode !== "none";
 
   // Snapshot fields are always populated — use them directly.
   const supplierCompanyName = invoice.supplierCompanyName;
@@ -407,15 +408,21 @@ function InvoiceDetailComponent() {
       </div>
 
       {/* ── Dates & Meta ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 mb-8 p-4 rounded-md bg-card border border-border/50">
+      <div
+        className={`grid grid-cols-2 gap-4 mb-8 rounded-md border border-border/50 bg-card p-4 ${
+          showVatMeta ? "sm:grid-cols-4 lg:grid-cols-6" : "sm:grid-cols-2 lg:grid-cols-4"
+        }`}
+      >
         <DetailField
           label="Datum vystavení"
           value={formatDate(invoice.issueDate)}
         />
-        <DetailField
-          label="DUZP"
-          value={formatDate(invoice.taxableSupplyDate)}
-        />
+        {showVatMeta && (
+          <DetailField
+            label="DUZP"
+            value={formatDate(invoice.taxableSupplyDate)}
+          />
+        )}
         <DetailField
           label="Datum splatnosti"
           value={formatDate(invoice.dueDate)}
@@ -427,7 +434,9 @@ function InvoiceDetailComponent() {
           />
         )}
         <DetailField label="Měna" value={currencyStr} mono />
-        <DetailField label="Režim DPH" value={vatModeLabel(invoice.vatMode)} />
+        {showVatMeta && (
+          <DetailField label="Režim DPH" value={vatModeLabel(invoice.vatMode)} />
+        )}
       </div>
 
       <Separator className="mb-8" />
