@@ -16,23 +16,31 @@ function ensurePdfFontsRegistered() {
   if (pdfFontsRegistered) return;
 
   Font.register({
-    family: "InvoicePdfOpenSans",
+    family: "InvoicePdfLibreBaskerville",
     fonts: [
       {
-        src: getPublicAssetUrl("/Open_Sans/static/OpenSans-Regular.ttf"),
+        src: getPublicAssetUrl(
+          "/Libre_Baskerville/static/LibreBaskerville-Regular.ttf",
+        ),
         fontWeight: 400,
       },
       {
-        src: getPublicAssetUrl("/Open_Sans/static/OpenSans-Italic.ttf"),
+        src: getPublicAssetUrl(
+          "/Libre_Baskerville/static/LibreBaskerville-Italic.ttf",
+        ),
         fontStyle: "italic",
         fontWeight: 400,
       },
       {
-        src: getPublicAssetUrl("/Open_Sans/static/OpenSans-Bold.ttf"),
+        src: getPublicAssetUrl(
+          "/Libre_Baskerville/static/LibreBaskerville-Bold.ttf",
+        ),
         fontWeight: 700,
       },
       {
-        src: getPublicAssetUrl("/Open_Sans/static/OpenSans-BoldItalic.ttf"),
+        src: getPublicAssetUrl(
+          "/Libre_Baskerville/static/LibreBaskerville-BoldItalic.ttf",
+        ),
         fontStyle: "italic",
         fontWeight: 700,
       },

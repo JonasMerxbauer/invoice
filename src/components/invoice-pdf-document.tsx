@@ -46,7 +46,7 @@ export type InvoicePdfItem = {
   total: number | null;
 };
 
-const PDF_SERIF_FAMILY = "InvoicePdfOpenSans";
+const PDF_SERIF_FAMILY = "InvoicePdfLibreBaskerville";
 const PDF_MONO_FAMILY = "InvoicePdfOpenSansMono";
 
 function formatDate(dateStr: string | null): string {
