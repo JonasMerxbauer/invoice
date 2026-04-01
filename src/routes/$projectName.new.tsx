@@ -83,10 +83,14 @@ function emptyLineItem(key: number): LineItem {
   };
 }
 
-function calcLineItem(item: LineItem) {
+function shouldApplyVat(vatMode: string | null | undefined) {
+  return vatMode === "standard";
+}
+
+function calcLineItem(item: LineItem, applyVat = true) {
   const qty = parseFloat(item.quantity) || 0;
   const price = parseFloat(item.unitPrice) || 0;
-  const vat = parseFloat(item.vatRate) || 0;
+  const vat = applyVat ? parseFloat(item.vatRate) || 0 : 0;
   const subtotal = qty * price;
   const vatAmount = subtotal * (vat / 100);
   const total = subtotal + vatAmount;
@@ -726,16 +730,17 @@ function validateInvoiceForm(
   }
 
   if (formResult.success) {
+    const applyVat = shouldApplyVat(effectiveVatMode);
     preparedItems.push(
       ...formResult.data.items.map((item, index) => {
-        const calc = calcLineItem(item);
+        const calc = calcLineItem(item, applyVat);
         return {
           sortOrder: index,
           description: item.description.trim(),
           quantity: Number(item.quantity),
           unit: item.unit.trim() || null,
           unitPrice: Number(item.unitPrice),
-          vatRate: Number(item.vatRate),
+          vatRate: applyVat ? Number(item.vatRate) : 0,
           subtotal: calc.subtotal,
           vatAmount: calc.vatAmount,
           total: calc.total,
@@ -860,6 +865,8 @@ function NewInvoiceComponent() {
     [customers, project],
   );
 
+  const applyVat = shouldApplyVat(project?.vatMode);
+
   // Generate next invoice number
   const nextInvoiceNumber = useMemo(() => {
     if (!project) return "";
@@ -904,7 +911,7 @@ function NewInvoiceComponent() {
       const effectiveInvoiceNumber = value.invoiceNumber || nextInvoiceNumber;
       const totals = value.items.reduce(
         (acc, item) => {
-          const calc = calcLineItem(item);
+          const calc = calcLineItem(item, applyVat);
           return {
             subtotal: acc.subtotal + calc.subtotal,
             vatTotal: acc.vatTotal + calc.vatAmount,
@@ -1069,13 +1076,13 @@ function NewInvoiceComponent() {
     let vatTotal = 0;
     let total = 0;
     for (const item of formValues.items) {
-      const calc = calcLineItem(item);
+      const calc = calcLineItem(item, applyVat);
       subtotal += calc.subtotal;
       vatTotal += calc.vatAmount;
       total += calc.total;
     }
     return { subtotal, vatTotal, total };
-  }, [formValues.items]);
+  }, [applyVat, formValues.items]);
 
   const saveValidation = useMemo(
     () =>
@@ -1414,9 +1421,11 @@ function NewInvoiceComponent() {
                 <TableHead className="font-mono text-xs uppercase tracking-wider text-right w-[15%]">
                   Cena/ks *
                 </TableHead>
-                <TableHead className="font-mono text-xs uppercase tracking-wider text-right w-[10%]">
-                  DPH % *
-                </TableHead>
+                {applyVat && (
+                  <TableHead className="font-mono text-xs uppercase tracking-wider text-right w-[10%]">
+                    DPH % *
+                  </TableHead>
+                )}
                 <TableHead className="font-mono text-xs uppercase tracking-wider text-right w-[15%]">
                   Celkem
                 </TableHead>
@@ -1425,7 +1434,7 @@ function NewInvoiceComponent() {
             </TableHeader>
             <TableBody>
               {formValues.items.map((item, index) => {
-                const calc = calcLineItem(item);
+                const calc = calcLineItem(item, applyVat);
                 return (
                   <TableRow key={item.key}>
                     <TableCell className="p-1">
@@ -1484,22 +1493,24 @@ function NewInvoiceComponent() {
                         }
                       />
                     </TableCell>
-                    <TableCell className="p-1">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={item.vatRate}
-                        onChange={(e) =>
-                          updateItem(index, "vatRate", e.target.value)
-                        }
-                        className="font-mono text-right border-0 shadow-none focus-visible:ring-1 h-8"
-                        aria-invalid={
-                          hasAttemptedSave &&
-                          Boolean(saveValidation.itemErrors.get(item.key))
-                        }
-                      />
-                    </TableCell>
+                    {applyVat && (
+                      <TableCell className="p-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={item.vatRate}
+                          onChange={(e) =>
+                            updateItem(index, "vatRate", e.target.value)
+                          }
+                          className="font-mono text-right border-0 shadow-none focus-visible:ring-1 h-8"
+                          aria-invalid={
+                            hasAttemptedSave &&
+                            Boolean(saveValidation.itemErrors.get(item.key))
+                          }
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="text-right font-mono text-sm p-1 pr-2">
                       {formatCurrency(calc.total, currencyStr)}
                     </TableCell>
@@ -1522,7 +1533,7 @@ function NewInvoiceComponent() {
             <TableFooter>
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={applyVat ? 5 : 4}
                   className="text-right font-mono text-xs uppercase tracking-wider"
                 >
                   Základ
@@ -1532,21 +1543,23 @@ function NewInvoiceComponent() {
                 </TableCell>
                 <TableCell />
               </TableRow>
+              {applyVat && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-right font-mono text-xs uppercase tracking-wider"
+                  >
+                    DPH
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-medium">
+                    {formatCurrency(totals.vatTotal, currencyStr)}
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+              )}
               <TableRow>
                 <TableCell
-                  colSpan={5}
-                  className="text-right font-mono text-xs uppercase tracking-wider"
-                >
-                  DPH
-                </TableCell>
-                <TableCell className="text-right font-mono font-medium">
-                  {formatCurrency(totals.vatTotal, currencyStr)}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-              <TableRow>
-                <TableCell
-                  colSpan={5}
+                  colSpan={applyVat ? 5 : 4}
                   className="text-right font-serif text-base font-bold"
                 >
                   Celkem
