@@ -23,7 +23,13 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { ArrowLeft, Building2, CreditCard, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  CreditCard,
+  Download,
+  FileText,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/$projectName/$invoiceId")({
@@ -147,6 +153,17 @@ const vatModeLabel = (mode: string | null) => {
   }
 };
 
+function sanitizeFilenamePart(value: string): string {
+  const normalized = value
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+
+  return normalized || "invoice";
+}
+
 function DetailField({
   label,
   value,
@@ -174,6 +191,8 @@ function InvoiceDetailComponent() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
   const [actionError, setActionError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const invoices = useQuery(allInvoices);
   const invoiceItems = useQuery(allInvoiceItems);
@@ -292,6 +311,37 @@ function InvoiceDetailComponent() {
     setActionError(null);
   };
 
+  const handleExportPdf = async () => {
+    try {
+      setExportError(null);
+      setIsExportingPdf(true);
+      const { generateInvoicePdfBlob } = await import("~/lib/invoice-pdf");
+
+      const blob = await generateInvoicePdfBlob({
+        invoice: invoice as any,
+        items: items as any,
+      });
+
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = window.document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `${sanitizeFilenamePart(projectName)}-${sanitizeFilenamePart(invoiceId)}.pdf`;
+      window.document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (error) {
+      console.error("Invoice PDF export failed", error);
+      const message =
+        error instanceof Error && error.message
+          ? `PDF se nepodařilo vygenerovat. ${error.message}`
+          : "PDF se nepodařilo vygenerovat.";
+      setExportError(message);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <>
       <div>
@@ -322,6 +372,14 @@ function InvoiceDetailComponent() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+            >
+              <Download className="size-4" />
+              {isExportingPdf ? "Generuji PDF..." : "Export PDF"}
+            </Button>
             {canRecordPayment && (
               <Button variant="outline" onClick={openPaymentDialog}>
                 Zaznamenat platbu
@@ -338,6 +396,12 @@ function InvoiceDetailComponent() {
         {actionError && (
           <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {actionError}
+          </div>
+        )}
+
+        {exportError && (
+          <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            {exportError}
           </div>
         )}
 
@@ -363,7 +427,9 @@ function InvoiceDetailComponent() {
                 </p>
               )}
               {supplierStreet && (
-                <p className="text-sm text-muted-foreground">{supplierStreet}</p>
+                <p className="text-sm text-muted-foreground">
+                  {supplierStreet}
+                </p>
               )}
               {(supplierCity || supplierPostalCode) && (
                 <p className="text-sm text-muted-foreground">
@@ -478,7 +544,9 @@ function InvoiceDetailComponent() {
         {/* ── Dates & Meta ──────────────────────────────────────────── */}
         <div
           className={`grid grid-cols-2 gap-4 mb-8 rounded-md border border-border/50 bg-card p-4 ${
-            showVatMeta ? "sm:grid-cols-4 lg:grid-cols-6" : "sm:grid-cols-2 lg:grid-cols-4"
+            showVatMeta
+              ? "sm:grid-cols-4 lg:grid-cols-6"
+              : "sm:grid-cols-2 lg:grid-cols-4"
           }`}
         >
           <DetailField
@@ -503,7 +571,10 @@ function InvoiceDetailComponent() {
           )}
           <DetailField label="Měna" value={currencyStr} mono />
           {showVatMeta && (
-            <DetailField label="Režim DPH" value={vatModeLabel(invoice.vatMode)} />
+            <DetailField
+              label="Režim DPH"
+              value={vatModeLabel(invoice.vatMode)}
+            />
           )}
         </div>
 
@@ -555,7 +626,9 @@ function InvoiceDetailComponent() {
                     <TableCell className="text-muted-foreground font-mono text-xs">
                       {index + 1}
                     </TableCell>
-                    <TableCell className="font-serif">{item.description}</TableCell>
+                    <TableCell className="font-serif">
+                      {item.description}
+                    </TableCell>
                     <TableCell className="text-right font-mono">
                       {item.quantity}
                     </TableCell>
@@ -663,7 +736,11 @@ function InvoiceDetailComponent() {
             >
               Zrušit
             </Button>
-            <Button type="button" onClick={handleRecordPayment} disabled={!paymentDate}>
+            <Button
+              type="button"
+              onClick={handleRecordPayment}
+              disabled={!paymentDate}
+            >
               Uložit platbu
             </Button>
           </DialogFooter>

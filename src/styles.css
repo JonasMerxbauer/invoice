@@ -2,6 +2,54 @@
 
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("/Libre_Baskerville/LibreBaskerville-VariableFont_wght.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Libre Baskerville";
+  src: url("/Libre_Baskerville/LibreBaskerville-Italic-VariableFont_wght.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lora";
+  src: url("/Lora/Lora-VariableFont_wght.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lora";
+  src: url("/Lora/Lora-Italic-VariableFont_wght.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/IBM_Plex_Mono/IBMPlexMono-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/IBM_Plex_Mono/IBMPlexMono-Medium.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 body {
