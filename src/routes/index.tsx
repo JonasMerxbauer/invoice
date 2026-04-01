@@ -48,6 +48,13 @@ const vatModeOptions = [
 
 const currencyOptions = ["CZK", "EUR", "USD"] as const;
 
+function getEffectiveVatMode(
+  vatMode: (typeof vatModeOptions)[number]["value"],
+  isVatPayer: ProjectFormValues["isVatPayer"],
+): (typeof vatModeOptions)[number]["value"] {
+  return isVatPayer === "true" ? vatMode : "none";
+}
+
 type ProjectFormValues = {
   name: string;
   companyName: string;
@@ -116,6 +123,7 @@ function getProjectFormValues(
   )
     ? project.vatMode
     : "standard";
+  const isVatPayer = project.isVatPayer ? "true" : "false";
 
   return {
     name: project.name ?? "",
@@ -123,8 +131,8 @@ function getProjectFormValues(
     ico: project.ico ?? "",
     dic: project.dic ?? "",
     vatId: project.vatId ?? "",
-    vatMode,
-    isVatPayer: project.isVatPayer ? "true" : "false",
+    vatMode: getEffectiveVatMode(vatMode, isVatPayer),
+    isVatPayer,
     street: project.street ?? "",
     city: project.city ?? "",
     postalCode: project.postalCode ?? "",
@@ -169,7 +177,18 @@ function ProjectDialog({
     field: K,
     value: ProjectFormValues[K],
   ) => {
-    setValues((current) => ({ ...current, [field]: value }));
+    setValues((current) => {
+      const nextValues = { ...current, [field]: value };
+
+      if (field === "isVatPayer") {
+        nextValues.vatMode = getEffectiveVatMode(
+          current.vatMode,
+          value as ProjectFormValues["isVatPayer"],
+        );
+      }
+
+      return nextValues;
+    });
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -193,7 +212,7 @@ function ProjectDialog({
       ico: toOptionalValue(values.ico),
       dic: toOptionalValue(values.dic),
       vatId: toOptionalValue(values.vatId),
-      vatMode: values.vatMode,
+      vatMode: getEffectiveVatMode(values.vatMode, values.isVatPayer),
       isVatPayer:
         values.isVatPayer === "true" ? Evolu.sqliteTrue : Evolu.sqliteFalse,
       street: toOptionalValue(values.street),
@@ -294,17 +313,6 @@ function ProjectDialog({
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <ProjectSelect
-                    label="Režim DPH"
-                    value={values.vatMode}
-                    onValueChange={(value) =>
-                      handleFieldChange(
-                        "vatMode",
-                        value as ProjectFormValues["vatMode"],
-                      )
-                    }
-                    options={vatModeOptions}
-                  />
-                  <ProjectSelect
                     label="Plátce DPH"
                     value={values.isVatPayer}
                     onValueChange={(value) =>
@@ -317,6 +325,18 @@ function ProjectDialog({
                       { value: "false", label: "Ne" },
                       { value: "true", label: "Ano" },
                     ]}
+                  />
+                  <ProjectSelect
+                    label="Režim DPH"
+                    value={values.vatMode}
+                    onValueChange={(value) =>
+                      handleFieldChange(
+                        "vatMode",
+                        value as ProjectFormValues["vatMode"],
+                      )
+                    }
+                    options={vatModeOptions}
+                    disabled={values.isVatPayer !== "true"}
                   />
                 </div>
                 <ProjectSelect
@@ -515,16 +535,18 @@ function ProjectSelect({
   value,
   onValueChange,
   options,
+  disabled,
 }: {
   label: string;
   value: string;
   onValueChange: (value: string) => void;
   options: ReadonlyArray<{ value: string; label: string }>;
+  disabled?: boolean;
 }) {
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={label} />
         </SelectTrigger>

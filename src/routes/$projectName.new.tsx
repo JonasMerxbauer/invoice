@@ -641,6 +641,7 @@ function TextField({
 function validateInvoiceForm(
   values: InvoiceFormValues,
   effectiveInvoiceNumber: string,
+  effectiveVatMode: InvoiceFormValues["vatMode"],
   hasProject: boolean,
   totals: { subtotal: number; vatTotal: number; total: number },
 ): InvoiceSaveValidation {
@@ -648,7 +649,10 @@ function validateInvoiceForm(
   const itemErrors = new Map<number, string[]>();
   const preparedItems: PreparedInvoiceItem[] = [];
 
-  const formResult = invoiceFormSchema.safeParse(values);
+  const formResult = invoiceFormSchema.safeParse({
+    ...values,
+    vatMode: effectiveVatMode,
+  });
   const parsedInvoiceNumber = resolvedInvoiceNumberSchema.safeParse(
     effectiveInvoiceNumber,
   );
@@ -888,6 +892,15 @@ function NewInvoiceComponent() {
       onSubmit: invoiceFormSchema,
     },
     onSubmit: async ({ value }) => {
+      if (!project) return;
+
+      const projectVatMode: InvoiceFormValues["vatMode"] =
+        project.vatMode === "none" ||
+        project.vatMode === "standard" ||
+        project.vatMode === "reverse-charge"
+          ? project.vatMode
+          : "standard";
+
       const effectiveInvoiceNumber = value.invoiceNumber || nextInvoiceNumber;
       const totals = value.items.reduce(
         (acc, item) => {
@@ -903,7 +916,8 @@ function NewInvoiceComponent() {
       const validation = validateInvoiceForm(
         value,
         effectiveInvoiceNumber,
-        Boolean(project),
+        projectVatMode,
+        true,
         totals,
       );
 
@@ -937,7 +951,7 @@ function NewInvoiceComponent() {
           paidDate: null,
           status: "draft",
           currency: value.currency as Evolu.CurrencyCode,
-          vatMode: value.vatMode as "none" | "standard" | "reverse-charge",
+          vatMode: project.vatMode,
           variableSymbol: value.variableSymbol.trim() || null,
           constantSymbol: value.constantSymbol.trim() || null,
           specificSymbol: value.specificSymbol.trim() || null,
@@ -1068,6 +1082,7 @@ function NewInvoiceComponent() {
       validateInvoiceForm(
         formValues,
         effectiveInvoiceNumber,
+        project?.vatMode ?? "standard",
         Boolean(project),
         totals,
       ),
@@ -1218,26 +1233,6 @@ function NewInvoiceComponent() {
                   <SelectItem value="EUR">EUR - Euro</SelectItem>
                   <SelectItem value="USD">USD - Americký dolar</SelectItem>
                   <SelectItem value="GBP">GBP - Britská libra</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wider">
-                Režim DPH
-              </Label>
-              <Select
-                value={formValues.vatMode}
-                onValueChange={(value) => form.setFieldValue("vatMode", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standardní DPH</SelectItem>
-                  <SelectItem value="reverse-charge">
-                    Přenesená daňová povinnost
-                  </SelectItem>
-                  <SelectItem value="none">Bez DPH</SelectItem>
                 </SelectContent>
               </Select>
             </div>
