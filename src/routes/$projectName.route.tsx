@@ -53,10 +53,7 @@ function RouteComponent() {
                     asChild
                     className="font-serif text-sm font-semibold"
                   >
-                    <Link
-                      to="/$projectName"
-                      params={{ projectName }}
-                    >
+                    <Link to="/$projectName" params={{ projectName }}>
                       {decodeURIComponent(projectName)}
                     </Link>
                   </BreadcrumbLink>
@@ -78,7 +75,7 @@ function RouteComponent() {
                 </>
               )}
 
-              {invoiceId && (
+              {invoiceId && !isNewRoute && (
                 <>
                   <BreadcrumbSeparator className="[&>svg]:size-3.5" />
                   <BreadcrumbItem>

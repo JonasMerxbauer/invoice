@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { format } from "date-fns";
 import { evolu, useEvolu } from "~/evolu";
 import * as Evolu from "@evolu/common";
 import { useQuery } from "@evolu/react";
-import { Calendar } from "~/components/ui/calendar";
 import { Button } from "~/components/ui/button";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
@@ -35,15 +34,14 @@ import {
 import { useForm, useStore } from "@tanstack/react-form-start";
 import { cn } from "~/lib/utils";
 import { z } from "zod";
+import { AlertCircle, Plus, Trash2, Save, UserPlus } from "lucide-react";
 import {
-  AlertCircle,
-  CalendarDays,
-  Plus,
-  Trash2,
-  Save,
-  UserPlus,
-} from "lucide-react";
-import { useState, useMemo, useCallback, type ComponentProps, type ReactNode } from "react";
+  useState,
+  useMemo,
+  useCallback,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 
 export const Route = createFileRoute("/$projectName/new")({
   component: NewInvoiceComponent,
@@ -58,7 +56,10 @@ const allCustomers = evolu.createQuery((db) =>
 );
 
 const allInvoices = evolu.createQuery((db) =>
-  db.selectFrom("invoice").select(["id", "invoiceNumber", "projectId"]).where("isDeleted", "is", null),
+  db
+    .selectFrom("invoice")
+    .select(["id", "invoiceNumber", "projectId"])
+    .where("isDeleted", "is", null),
 );
 
 // ── Line item state ──────────────────────────────────────────────────
@@ -124,7 +125,9 @@ function NewCustomerDialog({
     onSubmit: async ({ value }) => {
       const parsedName = Evolu.NonEmptyString100.from(value.name.trim());
       if (!parsedName.ok) {
-        setSaveError("Odběratele se nepodařilo uložit. Zkontrolujte povinná pole.");
+        setSaveError(
+          "Odběratele se nepodařilo uložit. Zkontrolujte povinná pole.",
+        );
         return;
       }
 
@@ -132,7 +135,8 @@ function NewCustomerDialog({
         projectId: projectId as any,
         name: parsedName.value,
         companyName: value.companyName.trim()
-          ? (Evolu.TrimmedString100.from(value.companyName.trim()) as any).value ?? null
+          ? ((Evolu.TrimmedString100.from(value.companyName.trim()) as any)
+              .value ?? null)
           : null,
         ico: value.ico.trim() || null,
         dic: value.dic.trim() || null,
@@ -148,7 +152,9 @@ function NewCustomerDialog({
       } as any);
 
       if (!result.ok) {
-        setSaveError("Odběratele se nepodařilo uložit. Zkontrolujte formát hodnot.");
+        setSaveError(
+          "Odběratele se nepodařilo uložit. Zkontrolujte formát hodnot.",
+        );
         return;
       }
 
@@ -207,9 +213,7 @@ function NewCustomerDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-serif">
-            Nový odběratel
-          </DialogTitle>
+          <DialogTitle className="font-serif">Nový odběratel</DialogTitle>
         </DialogHeader>
 
         {saveError && (
@@ -224,15 +228,23 @@ function NewCustomerDialog({
               label="Název"
               required
               value={customerValues.name}
-              onChange={(e) => customerForm.setFieldValue("name", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("name", e.target.value)
+              }
               placeholder="Název firmy / jméno"
               className="font-serif"
-              error={customerFieldInvalid("name") ? customerErrors.get("name") : undefined}
+              error={
+                customerFieldInvalid("name")
+                  ? customerErrors.get("name")
+                  : undefined
+              }
             />
             <TextField
               label="Název společnosti"
               value={customerValues.companyName}
-              onChange={(e) => customerForm.setFieldValue("companyName", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("companyName", e.target.value)
+              }
               placeholder="s.r.o., a.s. ..."
               className="font-serif"
               error={
@@ -246,18 +258,30 @@ function NewCustomerDialog({
             <TextField
               label="IČO"
               value={customerValues.ico}
-              onChange={(e) => customerForm.setFieldValue("ico", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("ico", e.target.value)
+              }
               placeholder="12345678"
               className="font-mono"
-              error={customerFieldInvalid("ico") ? customerErrors.get("ico") : undefined}
+              error={
+                customerFieldInvalid("ico")
+                  ? customerErrors.get("ico")
+                  : undefined
+              }
             />
             <TextField
               label="DIČ"
               value={customerValues.dic}
-              onChange={(e) => customerForm.setFieldValue("dic", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("dic", e.target.value)
+              }
               placeholder="CZ12345678"
               className="font-mono"
-              error={customerFieldInvalid("dic") ? customerErrors.get("dic") : undefined}
+              error={
+                customerFieldInvalid("dic")
+                  ? customerErrors.get("dic")
+                  : undefined
+              }
             />
           </div>
           <Separator />
@@ -265,24 +289,36 @@ function NewCustomerDialog({
             <TextField
               label="Ulice"
               value={customerValues.street}
-              onChange={(e) => customerForm.setFieldValue("street", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("street", e.target.value)
+              }
               className="font-serif"
               wrapperClassName="col-span-2"
               error={
-                customerFieldInvalid("street") ? customerErrors.get("street") : undefined
+                customerFieldInvalid("street")
+                  ? customerErrors.get("street")
+                  : undefined
               }
             />
             <TextField
               label="Město"
               value={customerValues.city}
-              onChange={(e) => customerForm.setFieldValue("city", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("city", e.target.value)
+              }
               className="font-serif"
-              error={customerFieldInvalid("city") ? customerErrors.get("city") : undefined}
+              error={
+                customerFieldInvalid("city")
+                  ? customerErrors.get("city")
+                  : undefined
+              }
             />
             <TextField
               label="PSČ"
               value={customerValues.postalCode}
-              onChange={(e) => customerForm.setFieldValue("postalCode", e.target.value)}
+              onChange={(e) =>
+                customerForm.setFieldValue("postalCode", e.target.value)
+              }
               className="font-mono"
               error={
                 customerFieldInvalid("postalCode")
@@ -294,15 +330,25 @@ function NewCustomerDialog({
           <TextField
             label="E-mail"
             value={customerValues.email}
-            onChange={(e) => customerForm.setFieldValue("email", e.target.value)}
+            onChange={(e) =>
+              customerForm.setFieldValue("email", e.target.value)
+            }
             type="email"
             className="font-mono"
-            error={customerFieldInvalid("email") ? customerErrors.get("email") : undefined}
+            error={
+              customerFieldInvalid("email")
+                ? customerErrors.get("email")
+                : undefined
+            }
           />
         </div>
 
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => handleOpenChange(false)}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => handleOpenChange(false)}
+          >
             Zrušit
           </Button>
           <Button onClick={handleSave} disabled={!customerCanSave}>
@@ -477,7 +523,10 @@ const customerFormSchema = z.object({
     .trim()
     .min(1, "Název je povinný.")
     .max(100, "Název může mít max. 100 znaků."),
-  companyName: z.string().trim().max(100, "Název společnosti může mít max. 100 znaků."),
+  companyName: z
+    .string()
+    .trim()
+    .max(100, "Název společnosti může mít max. 100 znaků."),
   ico: z.string().trim().max(16, "IČO může mít max. 16 znaků."),
   dic: z.string().trim().max(20, "DIČ může mít max. 20 znaků."),
   street: z.string().trim().max(100, "Ulice může mít max. 100 znaků."),
@@ -500,9 +549,18 @@ const resolvedInvoiceNumberSchema = z
   .max(100, "Číslo faktury je příliš dlouhé.");
 
 const totalsSchema = z.object({
-  subtotal: z.number().finite().nonnegative("Nepodařilo se spočítat částky faktury."),
-  vatTotal: z.number().finite().nonnegative("Nepodařilo se spočítat částky faktury."),
-  total: z.number().finite().nonnegative("Nepodařilo se spočítat částky faktury."),
+  subtotal: z
+    .number()
+    .finite()
+    .nonnegative("Nepodařilo se spočítat částky faktury."),
+  vatTotal: z
+    .number()
+    .finite()
+    .nonnegative("Nepodařilo se spočítat částky faktury."),
+  total: z
+    .number()
+    .finite()
+    .nonnegative("Nepodařilo se spočítat částky faktury."),
 });
 
 function parseIsoDate(value: string): Date | undefined {
@@ -625,8 +683,14 @@ function validateInvoiceForm(
     }
   }
 
-  if (!parsedInvoiceNumber.success && !errors.includes(parsedInvoiceNumber.error.issues[0]?.message ?? "")) {
-    errors.push(parsedInvoiceNumber.error.issues[0]?.message ?? "Doplňte platné číslo faktury.");
+  if (
+    !parsedInvoiceNumber.success &&
+    !errors.includes(parsedInvoiceNumber.error.issues[0]?.message ?? "")
+  ) {
+    errors.push(
+      parsedInvoiceNumber.error.issues[0]?.message ??
+        "Doplňte platné číslo faktury.",
+    );
   }
 
   if (!totalsResult.success) {
@@ -638,7 +702,10 @@ function validateInvoiceForm(
     }
   }
 
-  if (!parsedIssueDate.ok && !errors.includes("Doplňte platné datum vystavení.")) {
+  if (
+    !parsedIssueDate.ok &&
+    !errors.includes("Doplňte platné datum vystavení.")
+  ) {
     errors.push("Doplňte platné datum vystavení.");
   }
   if (
@@ -647,7 +714,10 @@ function validateInvoiceForm(
   ) {
     errors.push("Doplňte platné datum zdanitelného plnění.");
   }
-  if (!parsedDueDate.ok && !errors.includes("Doplňte platné datum splatnosti.")) {
+  if (
+    !parsedDueDate.ok &&
+    !errors.includes("Doplňte platné datum splatnosti.")
+  ) {
     errors.push("Doplňte platné datum splatnosti.");
   }
 
@@ -672,15 +742,15 @@ function validateInvoiceForm(
 
   const variableSymbolInvalid = Boolean(
     formResult.success === false &&
-      formResult.error.issues.some((issue) => issue.path[0] === "variableSymbol"),
+    formResult.error.issues.some((issue) => issue.path[0] === "variableSymbol"),
   );
   const constantSymbolInvalid = Boolean(
     formResult.success === false &&
-      formResult.error.issues.some((issue) => issue.path[0] === "constantSymbol"),
+    formResult.error.issues.some((issue) => issue.path[0] === "constantSymbol"),
   );
   const specificSymbolInvalid = Boolean(
     formResult.success === false &&
-      formResult.error.issues.some((issue) => issue.path[0] === "specificSymbol"),
+    formResult.error.issues.some((issue) => issue.path[0] === "specificSymbol"),
   );
 
   return {
@@ -696,7 +766,9 @@ function validateInvoiceForm(
     errors,
     itemErrors,
     preparedItems,
-    invoiceNumber: parsedInvoiceNumber.success ? parsedInvoiceNumber.data : null,
+    invoiceNumber: parsedInvoiceNumber.success
+      ? parsedInvoiceNumber.data
+      : null,
     issueDate: parsedIssueDate.ok ? parsedIssueDate.value : null,
     taxableSupplyDate: parsedSupplyDate.ok ? parsedSupplyDate.value : null,
     dueDate: parsedDueDate.ok ? parsedDueDate.value : null,
@@ -709,21 +781,21 @@ function validateInvoiceForm(
       !parsedIssueDate.ok ||
       Boolean(
         formResult.success === false &&
-          formResult.error.issues.some((issue) => issue.path[0] === "issueDate"),
+        formResult.error.issues.some((issue) => issue.path[0] === "issueDate"),
       ),
     taxableSupplyDateInvalid:
       !parsedSupplyDate.ok ||
       Boolean(
         formResult.success === false &&
-          formResult.error.issues.some(
-            (issue) => issue.path[0] === "taxableSupplyDate",
-          ),
+        formResult.error.issues.some(
+          (issue) => issue.path[0] === "taxableSupplyDate",
+        ),
       ),
     dueDateInvalid:
       !parsedDueDate.ok ||
       Boolean(
         formResult.success === false &&
-          formResult.error.issues.some((issue) => issue.path[0] === "dueDate"),
+        formResult.error.issues.some((issue) => issue.path[0] === "dueDate"),
       ),
     variableSymbolInvalid,
     constantSymbolInvalid,
@@ -742,7 +814,6 @@ function DatePickerField({
   onChange: (value: string) => void;
   invalid?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const selectedDate = parseIsoDate(value);
 
   return (
@@ -750,39 +821,16 @@ function DatePickerField({
       <Label className="text-xs font-mono uppercase tracking-wider">
         {label} *
       </Label>
-      <Button
-        type="button"
-        variant="outline"
-        aria-invalid={invalid}
-        className={cn(
-          "w-full justify-between font-mono",
-          !selectedDate && "text-muted-foreground",
-        )}
-        onClick={() => setOpen(true)}
-      >
-        <span>
-          {selectedDate ? format(selectedDate, "dd.MM.yyyy") : "Vyberte datum"}
-        </span>
-        <CalendarDays className="size-4" />
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-auto max-w-fit p-0">
-          <DialogHeader className="px-4 pt-4 pb-0">
-            <DialogTitle className="font-serif">{label}</DialogTitle>
-          </DialogHeader>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => {
-              if (!date) return;
-              onChange(toIsoDate(date));
-              setOpen(false);
-            }}
-            initialFocus
-          />
-        </DialogContent>
-      </Dialog>
+      <DatePicker
+        value={selectedDate}
+        onChange={(date) => {
+          if (!date) return;
+          onChange(toIsoDate(date));
+        }}
+        placeholder="Vyberte datum"
+        invalid={invalid}
+        className="w-full justify-between font-mono"
+      />
     </div>
   );
 }
@@ -804,8 +852,7 @@ function NewInvoiceComponent() {
   );
 
   const projectCustomers = useMemo(
-    () =>
-      project ? customers.filter((c) => c.projectId === project.id) : [],
+    () => (project ? customers.filter((c) => c.projectId === project.id) : []),
     [customers, project],
   );
 
@@ -1091,17 +1138,10 @@ function NewInvoiceComponent() {
             Pole označená * jsou povinná.
           </p>
         </div>
-        <Button
-          type="submit"
-          className="gap-2"
-          disabled={!saveValidation.canSave || isSubmitting}
-        >
-          <Save className="size-4" />
-          Uložit fakturu
-        </Button>
       </div>
 
-      {(saveError || (hasAttemptedSave && visibleValidationErrors.length > 0)) && (
+      {(saveError ||
+        (hasAttemptedSave && visibleValidationErrors.length > 0)) && (
         <div
           className={cn(
             "mb-6 rounded-lg border px-4 py-3",
@@ -1128,7 +1168,8 @@ function NewInvoiceComponent() {
                   </p>
                   <p className="text-muted-foreground">
                     {visibleValidationErrors.join(" ")}
-                    {saveValidation.errors.length > visibleValidationErrors.length
+                    {saveValidation.errors.length >
+                    visibleValidationErrors.length
                       ? " A další pole."
                       : ""}
                   </p>
@@ -1150,7 +1191,9 @@ function NewInvoiceComponent() {
               label="Číslo faktury"
               required
               value={formValues.invoiceNumber}
-              onChange={(e) => form.setFieldValue("invoiceNumber", e.target.value)}
+              onChange={(e) =>
+                form.setFieldValue("invoiceNumber", e.target.value)
+              }
               placeholder={nextInvoiceNumber}
               className="font-mono"
               error={
@@ -1215,11 +1258,15 @@ function NewInvoiceComponent() {
               </Label>
               <Select
                 value={formValues.customerId}
-                onValueChange={(value) => form.setFieldValue("customerId", value)}
+                onValueChange={(value) =>
+                  form.setFieldValue("customerId", value)
+                }
               >
                 <SelectTrigger
                   className="w-full"
-                  aria-invalid={hasAttemptedSave && saveValidation.customerMissing}
+                  aria-invalid={
+                    hasAttemptedSave && saveValidation.customerMissing
+                  }
                 >
                   <SelectValue placeholder="-- Zvolte odběratele --" />
                 </SelectTrigger>
@@ -1241,7 +1288,7 @@ function NewInvoiceComponent() {
               variant="outline"
               type="button"
               onClick={() => setCustomerDialogOpen(true)}
-              className="gap-1.5 shrink-0"
+              className="gap-1.5 shrink-0 mb-1.5"
             >
               <UserPlus className="size-4" />
               Nový odběratel
@@ -1293,7 +1340,9 @@ function NewInvoiceComponent() {
             <TextField
               label="Variabilní symbol"
               value={formValues.variableSymbol}
-              onChange={(e) => form.setFieldValue("variableSymbol", e.target.value)}
+              onChange={(e) =>
+                form.setFieldValue("variableSymbol", e.target.value)
+              }
               placeholder={effectiveInvoiceNumber}
               maxLength={10}
               className="font-mono"
@@ -1306,7 +1355,9 @@ function NewInvoiceComponent() {
             <TextField
               label="Konstantní symbol"
               value={formValues.constantSymbol}
-              onChange={(e) => form.setFieldValue("constantSymbol", e.target.value)}
+              onChange={(e) =>
+                form.setFieldValue("constantSymbol", e.target.value)
+              }
               placeholder="0308"
               maxLength={4}
               className="font-mono"
@@ -1319,7 +1370,9 @@ function NewInvoiceComponent() {
             <TextField
               label="Specifický symbol"
               value={formValues.specificSymbol}
-              onChange={(e) => form.setFieldValue("specificSymbol", e.target.value)}
+              onChange={(e) =>
+                form.setFieldValue("specificSymbol", e.target.value)
+              }
               maxLength={10}
               className="font-mono"
               error={
@@ -1337,7 +1390,7 @@ function NewInvoiceComponent() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-            Položky faktury
+              Položky faktury
             </h2>
             <Button
               variant="outline"
@@ -1473,7 +1526,10 @@ function NewInvoiceComponent() {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={5} className="text-right font-mono text-xs uppercase tracking-wider">
+                <TableCell
+                  colSpan={5}
+                  className="text-right font-mono text-xs uppercase tracking-wider"
+                >
                   Základ
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
@@ -1482,7 +1538,10 @@ function NewInvoiceComponent() {
                 <TableCell />
               </TableRow>
               <TableRow>
-                <TableCell colSpan={5} className="text-right font-mono text-xs uppercase tracking-wider">
+                <TableCell
+                  colSpan={5}
+                  className="text-right font-mono text-xs uppercase tracking-wider"
+                >
                   DPH
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
@@ -1491,7 +1550,10 @@ function NewInvoiceComponent() {
                 <TableCell />
               </TableRow>
               <TableRow>
-                <TableCell colSpan={5} className="text-right font-serif text-base font-bold">
+                <TableCell
+                  colSpan={5}
+                  className="text-right font-serif text-base font-bold"
+                >
                   Celkem
                 </TableCell>
                 <TableCell className="text-right font-mono text-base font-bold">
