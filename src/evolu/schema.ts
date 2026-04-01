@@ -7,9 +7,7 @@ const InvoiceId = Evolu.id("Invoice");
 const InvoiceItemId = Evolu.id("InvoiceItem");
 
 const InvoiceStatus = Evolu.union(
-  Evolu.literal("draft"),
   Evolu.literal("issued"),
-  Evolu.literal("overdue"),
   Evolu.literal("paid"),
   Evolu.literal("cancelled"),
 );

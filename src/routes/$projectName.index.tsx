@@ -31,17 +31,12 @@ export const Route = createFileRoute("/$projectName/")({
   component: RouteComponent,
 });
 
-type InvoiceStatus = "draft" | "issued" | "overdue" | "paid" | "cancelled";
+type InvoiceDisplayStatus = "issued" | "overdue" | "paid" | "cancelled";
 
 const statusConfig: Record<
-  InvoiceStatus,
+  InvoiceDisplayStatus,
   { label: string; className: string }
 > = {
-  draft: {
-    label: "Koncept",
-    className:
-      "bg-muted text-muted-foreground border-muted-foreground/20 border",
-  },
   issued: {
     label: "Vystavená",
     className: "bg-blue-500/15 text-blue-400 border-blue-500/30 border",
@@ -60,6 +55,27 @@ const statusConfig: Record<
       "bg-muted text-muted-foreground/60 border-muted-foreground/10 border line-through",
   },
 };
+
+function formatDateIso(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayIso(): string {
+  return formatDateIso(new Date());
+}
+
+function getInvoiceDisplayStatus(invoice: {
+  status: string | null;
+  dueDate: string | null;
+}): InvoiceDisplayStatus {
+  if (invoice.status === "cancelled") return "cancelled";
+  if (invoice.status === "paid") return "paid";
+  if (invoice.dueDate && invoice.dueDate < getTodayIso()) return "overdue";
+  return "issued";
+}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "\u2014";
@@ -124,10 +140,13 @@ function RouteComponent() {
     0,
   );
   const paidCount = projectInvoices.filter(
-    (inv) => inv.status === "paid",
+    (inv) => getInvoiceDisplayStatus(inv) === "paid",
   ).length;
   const unpaidCount = projectInvoices.filter(
-    (inv) => inv.status === "issued" || inv.status === "overdue",
+    (inv) => {
+      const status = getInvoiceDisplayStatus(inv);
+      return status === "issued" || status === "overdue";
+    },
   ).length;
 
   return (
@@ -246,8 +265,8 @@ function RouteComponent() {
             </TableHeader>
             <TableBody>
               {projectInvoices.map((invoice) => {
-                const status = (invoice.status as InvoiceStatus) ?? "draft";
-                const config = statusConfig[status] ?? statusConfig.draft;
+                const status = getInvoiceDisplayStatus(invoice);
+                const config = statusConfig[status];
 
                 return (
                   <TableRow key={invoice.id} className="group">

@@ -974,7 +974,7 @@ function NewInvoiceComponent() {
           taxableSupplyDate: validation.taxableSupplyDate,
           dueDate: validation.dueDate,
           paidDate: null,
-          status: "draft",
+          status: "issued",
           currency: effectiveValue.currency as Evolu.CurrencyCode,
           vatMode: project.vatMode,
           variableSymbol: effectiveValue.variableSymbol.trim() || null,
