@@ -19,22 +19,6 @@
 }
 
 @font-face {
-  font-family: "Lora";
-  src: url("/Lora/Lora-VariableFont_wght.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Lora";
-  src: url("/Lora/Lora-Italic-VariableFont_wght.ttf") format("truetype");
-  font-style: italic;
-  font-weight: 400 700;
-  font-display: swap;
-}
-
-@font-face {
   font-family: "IBM Plex Mono";
   src: url("/IBM_Plex_Mono/IBMPlexMono-Regular.ttf") format("truetype");
   font-style: normal;
@@ -100,7 +84,7 @@ code {
   --sidebar-border: oklch(0.8606 0.0321 84.5881);
   --sidebar-ring: oklch(0.618 0.0778 65.5444);
   --font-sans: Libre Baskerville, serif;
-  --font-serif: Lora, serif;
+  --font-serif: Libre Baskerville, serif;
   --font-mono: IBM Plex Mono, monospace;
   --radius: 0.25rem;
   --shadow-x: 2px;
@@ -165,7 +149,7 @@ code {
   --sidebar-border: oklch(0.3795 0.0181 57.128);
   --sidebar-ring: oklch(0.7264 0.0581 66.6967);
   --font-sans: Libre Baskerville, serif;
-  --font-serif: Lora, serif;
+  --font-serif: Libre Baskerville, serif;
   --font-mono: IBM Plex Mono, monospace;
   --radius: 0.25rem;
   --shadow-x: 2px;
