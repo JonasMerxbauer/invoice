@@ -26,9 +26,10 @@ const VatMode = Evolu.union(
   Evolu.literal("reverse-charge"),
 );
 
-const DigitString = Evolu.regex("DigitString", /^\d+$/)(
-  Evolu.NonEmptyTrimmedString,
-);
+const DigitString = Evolu.regex(
+  "DigitString",
+  /^\d+$/,
+)(Evolu.NonEmptyTrimmedString);
 const VariableSymbol = Evolu.maxLength(10)(DigitString);
 const ConstantSymbol = Evolu.maxLength(4)(DigitString);
 const SpecificSymbol = Evolu.maxLength(10)(DigitString);
@@ -38,9 +39,10 @@ const VatId = Evolu.maxLength(20)(Evolu.NonEmptyTrimmedString);
 const PostalCode = Evolu.maxLength(20)(Evolu.NonEmptyTrimmedString);
 const BankAccount = Evolu.maxLength(34)(Evolu.NonEmptyTrimmedString);
 const Iban = Evolu.maxLength(34)(Evolu.NonEmptyTrimmedString);
-const Swift = Evolu.regex("Swift", /^[A-Z0-9]{8}([A-Z0-9]{3})?$/)(
-  Evolu.NonEmptyTrimmedString,
-);
+const Swift = Evolu.regex(
+  "Swift",
+  /^[A-Z0-9]{8}([A-Z0-9]{3})?$/,
+)(Evolu.NonEmptyTrimmedString);
 const Phone = Evolu.maxLength(30)(Evolu.NonEmptyTrimmedString);
 const Website = Evolu.maxLength(255)(Evolu.NonEmptyTrimmedString);
 const Unit = Evolu.maxLength(20)(Evolu.NonEmptyTrimmedString);

@@ -20,18 +20,8 @@ import {
   TableRow,
   TableFooter,
 } from "~/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import {
-  ArrowLeft,
-  Building2,
-  CreditCard,
-  FileText,
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { ArrowLeft, Building2, CreditCard, FileText } from "lucide-react";
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/$projectName/$invoiceId")({

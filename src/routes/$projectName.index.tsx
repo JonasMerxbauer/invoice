@@ -70,7 +70,10 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-function formatCurrency(amount: number | null, currency: string | null): string {
+function formatCurrency(
+  amount: number | null,
+  currency: string | null,
+): string {
   if (amount == null) return "\u2014";
   try {
     return new Intl.NumberFormat("cs-CZ", {
@@ -98,9 +101,7 @@ function RouteComponent() {
   // Filter invoices for this project
   const projectInvoices = useMemo(
     () =>
-      project
-        ? invoices.filter((inv) => inv.projectId === project.id)
-        : [],
+      project ? invoices.filter((inv) => inv.projectId === project.id) : [],
     [invoices, project],
   );
 
@@ -140,9 +141,7 @@ function RouteComponent() {
           <p className="text-sm text-muted-foreground">
             {project.companyName}
             {project.ico && (
-              <span className="ml-2 font-mono text-xs">
-                IČO: {project.ico}
-              </span>
+              <span className="ml-2 font-mono text-xs">IČO: {project.ico}</span>
             )}
           </p>
         </div>
@@ -267,9 +266,7 @@ function RouteComponent() {
                     </TableCell>
                     <TableCell className="font-serif text-sm">
                       {invoice.customerName ?? (
-                        <span className="text-muted-foreground italic">
-                          --
-                        </span>
+                        <span className="text-muted-foreground italic">--</span>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
