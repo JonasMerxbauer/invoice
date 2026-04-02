@@ -690,7 +690,7 @@ function FieldBlock({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("flex flex-col gap-1.5", className)}>
       <Label className="text-xs font-mono uppercase tracking-wider">
         {label}
         {required ? " *" : ""}
@@ -1140,7 +1140,7 @@ function DatePickerField({
   const selectedDate = parseIsoDate(value);
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("flex flex-col gap-1.5", className)}>
       <Label className="text-xs font-mono uppercase tracking-wider">
         {label} *
       </Label>
@@ -1635,7 +1635,7 @@ function NewInvoiceComponent() {
                 saveError ? "text-destructive" : "text-muted-foreground",
               )}
             />
-            <div className="space-y-1 text-sm">
+            <div className="flex flex-col gap-1 text-sm">
               {saveError && (
                 <p className="font-medium text-destructive">{saveError}</p>
               )}
@@ -1658,7 +1658,7 @@ function NewInvoiceComponent() {
         </div>
       )}
 
-      <div className="space-y-8">
+      <div className="flex flex-col gap-8">
         {/* ── Section: Zakladni udaje ─────────────────────────────── */}
         <section>
           <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-4">
@@ -1680,7 +1680,7 @@ function NewInvoiceComponent() {
                   : undefined
               }
             />
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-mono uppercase tracking-wider">
                 Měna
               </Label>
@@ -1710,7 +1710,7 @@ function NewInvoiceComponent() {
             Odběratel
           </h2>
           <div className="flex gap-3 items-end">
-            <div className="flex-1 space-y-1.5">
+            <div className="flex flex-1 flex-col gap-1.5">
               <Label className="text-xs font-mono uppercase tracking-wider">
                 Vyberte odběratele *
               </Label>
@@ -1746,7 +1746,7 @@ function NewInvoiceComponent() {
               variant="outline"
               type="button"
               onClick={() => setCustomerDialogOpen(true)}
-              className="gap-1.5 shrink-0 mb-1.5"
+              className="gap-1.5 shrink-0"
             >
               <UserPlus className="size-4" />
               Nový odběratel
@@ -1876,7 +1876,7 @@ function NewInvoiceComponent() {
                   variant="outline"
                   type="button"
                   onClick={() => setBankAccountDialogOpen(true)}
-                  className="gap-1.5 sm:mb-0.5"
+                  className="gap-1.5"
                 >
                   <Plus className="size-4" />
                   Nový účet
