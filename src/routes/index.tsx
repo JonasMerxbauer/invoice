@@ -768,9 +768,5 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <Suspense fallback={<HomePageSkeleton />}>
-      <AppContent />
-    </Suspense>
-  );
+  return <AppContent />;
 }
