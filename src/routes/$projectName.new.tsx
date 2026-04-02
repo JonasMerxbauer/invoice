@@ -414,6 +414,7 @@ interface InvoiceFormValues {
   currency: string;
   vatMode: string;
   paymentMethod: string;
+  bankPaymentMethodId: string;
   customPaymentMethod: string;
   variableSymbol: string;
   constantSymbol: string;
@@ -422,11 +423,20 @@ interface InvoiceFormValues {
   items: LineItem[];
 }
 
+interface BankAccountFormValues {
+  name: string;
+  bankAccount: string;
+  iban: string;
+  swift: string;
+}
+
 const paymentMethodOptions = ["Banka", "Hotove", "Jine"] as const;
 
 const paymentMethodSchema = z.enum(paymentMethodOptions, {
   error: "Vyberte platební metodu.",
 });
+
+const projectBankAccountOptionValue = "__project-default-bank-account__";
 
 interface PreparedInvoiceItem {
   sortOrder: number;
@@ -458,6 +468,7 @@ interface InvoiceSaveValidation {
   taxableSupplyDateInvalid: boolean;
   dueDateInvalid: boolean;
   paymentMethodInvalid: boolean;
+  bankPaymentMethodInvalid: boolean;
   customPaymentMethodInvalid: boolean;
   variableSymbolInvalid: boolean;
   constantSymbolInvalid: boolean;
@@ -537,6 +548,7 @@ const invoiceFormSchema = z
     currency: z.string().min(1, "Vyberte měnu."),
     vatMode: z.enum(["none", "standard", "reverse-charge"]),
     paymentMethod: paymentMethodSchema,
+    bankPaymentMethodId: z.string(),
     customPaymentMethod: z
       .string()
       .trim()
@@ -557,6 +569,17 @@ const invoiceFormSchema = z
     items: z.array(lineItemSchema).min(1, "Přidejte alespoň jednu položku."),
   })
   .superRefine((values, ctx) => {
+    if (
+      values.paymentMethod === "Banka" &&
+      values.bankPaymentMethodId.trim().length === 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["bankPaymentMethodId"],
+        message: "Vyberte bankovní účet.",
+      });
+    }
+
     if (
       values.paymentMethod === "Jine" &&
       values.customPaymentMethod.trim().length === 0
@@ -592,6 +615,21 @@ const customerFormSchema = z.object({
       (value) => value.length === 0 || z.email().safeParse(value).success,
       "Zadejte platný e-mail.",
     ),
+});
+
+const bankAccountFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Název účtu je povinný.")
+    .max(100, "Název účtu může mít max. 100 znaků."),
+  bankAccount: z
+    .string()
+    .trim()
+    .min(1, "Číslo účtu je povinné.")
+    .max(34, "Číslo účtu může mít max. 34 znaků."),
+  iban: z.string().trim().max(34, "IBAN může mít max. 34 znaků."),
+  swift: z.string().trim().max(11, "SWIFT může mít max. 11 znaků."),
 });
 
 const resolvedInvoiceNumberSchema = z
@@ -687,6 +725,213 @@ function TextField({
     >
       <Input {...props} className={className} aria-invalid={Boolean(error)} />
     </FieldBlock>
+  );
+}
+
+function NewBankAccountDialog({
+  open,
+  onClose,
+  onCreated,
+  projectId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+  projectId: string;
+}) {
+  const { insert } = useEvolu();
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const bankAccountForm = useForm({
+    defaultValues: {
+      name: "",
+      bankAccount: "",
+      iban: "",
+      swift: "",
+    } satisfies BankAccountFormValues,
+    validators: {
+      onSubmit: bankAccountFormSchema,
+    },
+    onSubmit: async ({ value }) => {
+      const parsedName = Evolu.NonEmptyString100.from(value.name.trim());
+      const parsedBankAccount = Evolu.NonEmptyTrimmedString.from(
+        value.bankAccount.trim(),
+      );
+
+      if (!parsedName.ok || !parsedBankAccount.ok) {
+        setSaveError(
+          "Bankovní účet se nepodařilo uložit. Zkontrolujte povinná pole.",
+        );
+        return;
+      }
+
+      const result = insert("paymentMethod", {
+        projectId: projectId as any,
+        name: parsedName.value,
+        type: "bank-transfer",
+        bankAccount: parsedBankAccount.value,
+        iban: value.iban.trim().toUpperCase() || null,
+        swift: value.swift.trim().toUpperCase() || null,
+        isDefault: Evolu.sqliteFalse,
+      } as any);
+
+      if (!result.ok) {
+        setSaveError(
+          "Bankovní účet se nepodařilo uložit. Zkontrolujte formát hodnot.",
+        );
+        return;
+      }
+
+      onCreated(result.value.id);
+      bankAccountForm.reset();
+      setHasAttemptedSave(false);
+      setSaveError(null);
+      onClose();
+    },
+  });
+  const bankAccountValues = useStore(
+    bankAccountForm.store,
+    (state) => state.values,
+  );
+  const bankAccountIsSubmitting = useStore(
+    bankAccountForm.store,
+    (state) => state.isSubmitting,
+  );
+  const bankAccountValidation = useMemo(
+    () => bankAccountFormSchema.safeParse(bankAccountValues),
+    [bankAccountValues],
+  );
+  const bankAccountErrors = useMemo(() => {
+    if (bankAccountValidation.success) return new Map<string, string>();
+
+    const nextErrors = new Map<string, string>();
+    for (const issue of bankAccountValidation.error.issues) {
+      const field = issue.path[0];
+      if (typeof field === "string" && !nextErrors.has(field)) {
+        nextErrors.set(field, issue.message);
+      }
+    }
+    return nextErrors;
+  }, [bankAccountValidation]);
+  const bankAccountCanSave =
+    bankAccountValidation.success && !bankAccountIsSubmitting;
+
+  const bankAccountFieldInvalid = (field: keyof BankAccountFormValues) =>
+    hasAttemptedSave && bankAccountErrors.has(field);
+
+  const handleSave = () => {
+    setHasAttemptedSave(true);
+    setSaveError(null);
+
+    if (!bankAccountCanSave) return;
+
+    void bankAccountForm.handleSubmit();
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) return;
+
+    bankAccountForm.reset();
+    setHasAttemptedSave(false);
+    setSaveError(null);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-serif">Nový bankovní účet</DialogTitle>
+        </DialogHeader>
+
+        {saveError && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            {saveError}
+          </div>
+        )}
+
+        <div className="grid gap-4 py-2">
+          <TextField
+            label="Název účtu"
+            required
+            value={bankAccountValues.name}
+            onChange={(e) =>
+              bankAccountForm.setFieldValue("name", e.target.value)
+            }
+            placeholder="Hlavní účet"
+            className="font-serif"
+            error={
+              bankAccountFieldInvalid("name")
+                ? bankAccountErrors.get("name")
+                : undefined
+            }
+          />
+          <TextField
+            label="Číslo účtu"
+            required
+            value={bankAccountValues.bankAccount}
+            onChange={(e) =>
+              bankAccountForm.setFieldValue("bankAccount", e.target.value)
+            }
+            placeholder="123456789/0100"
+            className="font-mono"
+            error={
+              bankAccountFieldInvalid("bankAccount")
+                ? bankAccountErrors.get("bankAccount")
+                : undefined
+            }
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField
+              label="IBAN"
+              value={bankAccountValues.iban}
+              onChange={(e) =>
+                bankAccountForm.setFieldValue(
+                  "iban",
+                  e.target.value.toUpperCase(),
+                )
+              }
+              className="font-mono"
+              error={
+                bankAccountFieldInvalid("iban")
+                  ? bankAccountErrors.get("iban")
+                  : undefined
+              }
+            />
+            <TextField
+              label="SWIFT"
+              value={bankAccountValues.swift}
+              onChange={(e) =>
+                bankAccountForm.setFieldValue(
+                  "swift",
+                  e.target.value.toUpperCase(),
+                )
+              }
+              className="font-mono"
+              error={
+                bankAccountFieldInvalid("swift")
+                  ? bankAccountErrors.get("swift")
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => handleOpenChange(false)}
+          >
+            Zrušit
+          </Button>
+          <Button onClick={handleSave} disabled={!bankAccountCanSave}>
+            <Plus className="size-4 mr-1.5" />
+            Přidat účet
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -811,6 +1056,12 @@ function validateInvoiceForm(
       (issue) => issue.path[0] === "customPaymentMethod",
     ),
   );
+  const bankPaymentMethodInvalid = Boolean(
+    formResult.success === false &&
+    formResult.error.issues.some(
+      (issue) => issue.path[0] === "bankPaymentMethodId",
+    ),
+  );
   const constantSymbolInvalid = Boolean(
     formResult.success === false &&
     formResult.error.issues.some((issue) => issue.path[0] === "constantSymbol"),
@@ -865,6 +1116,7 @@ function validateInvoiceForm(
         formResult.error.issues.some((issue) => issue.path[0] === "dueDate"),
       ),
     paymentMethodInvalid,
+    bankPaymentMethodInvalid,
     customPaymentMethodInvalid,
     variableSymbolInvalid,
     constantSymbolInvalid,
@@ -928,6 +1180,38 @@ function NewInvoiceComponent() {
     [customers, project],
   );
 
+  const bankPaymentMethods = useMemo(
+    () =>
+      project
+        ? paymentMethods.filter(
+            (method) =>
+              method.projectId === project.id &&
+              method.type === "bank-transfer",
+          )
+        : [],
+    [paymentMethods, project],
+  );
+
+  const projectDefaultBankOption = useMemo(() => {
+    if (!project?.bankAccount) return null;
+
+    return {
+      id: projectBankAccountOptionValue,
+      name: project.companyName || "Výchozí účet projektu",
+      bankAccount: project.bankAccount,
+      iban: project.iban,
+      swift: project.swift,
+    };
+  }, [project]);
+
+  const selectableBankPaymentMethods = useMemo(
+    () =>
+      projectDefaultBankOption
+        ? [projectDefaultBankOption, ...bankPaymentMethods]
+        : bankPaymentMethods,
+    [bankPaymentMethods, projectDefaultBankOption],
+  );
+
   const applyVat = shouldApplyVat(project?.vatMode);
 
   // Generate next invoice number
@@ -953,6 +1237,7 @@ function NewInvoiceComponent() {
       currency: "CZK",
       vatMode: "standard",
       paymentMethod: "Banka",
+      bankPaymentMethodId: "",
       customPaymentMethod: "",
       variableSymbol: "",
       constantSymbol: "",
@@ -1013,6 +1298,9 @@ function NewInvoiceComponent() {
       const selectedCustomer = projectCustomers.find(
         (customer) => customer.id === effectiveValue.customerId,
       );
+      const selectedBankPaymentMethod = selectableBankPaymentMethods.find(
+        (method) => method.id === effectiveValue.bankPaymentMethodId,
+      );
       const resolvedPaymentMethodName =
         effectiveValue.paymentMethod === "Jine"
           ? effectiveValue.customPaymentMethod.trim()
@@ -1021,7 +1309,9 @@ function NewInvoiceComponent() {
       const existingPaymentMethod = paymentMethods.find(
         (method) =>
           method.projectId === project.id &&
-          method.name === resolvedPaymentMethodName,
+          (effectiveValue.paymentMethod === "Banka"
+            ? method.id === selectedBankPaymentMethod?.id
+            : method.name === resolvedPaymentMethodName),
       );
 
       let paymentMethodId = existingPaymentMethod?.id ?? null;
@@ -1038,10 +1328,17 @@ function NewInvoiceComponent() {
             type: paymentMethodType,
             bankAccount:
               paymentMethodType === "bank-transfer"
-                ? project.bankAccount
+                ? (selectedBankPaymentMethod?.bankAccount ??
+                  project.bankAccount)
                 : null,
-            iban: paymentMethodType === "bank-transfer" ? project.iban : null,
-            swift: paymentMethodType === "bank-transfer" ? project.swift : null,
+            iban:
+              paymentMethodType === "bank-transfer"
+                ? (selectedBankPaymentMethod?.iban ?? project.iban)
+                : null,
+            swift:
+              paymentMethodType === "bank-transfer"
+                ? (selectedBankPaymentMethod?.swift ?? project.swift)
+                : null,
             isDefault: false,
           } as any);
 
@@ -1080,9 +1377,18 @@ function NewInvoiceComponent() {
           supplierCity: project.city,
           supplierPostalCode: project.postalCode,
           supplierCountry: project.country,
-          supplierBankAccount: project.bankAccount,
-          supplierIban: project.iban,
-          supplierSwift: project.swift,
+          supplierBankAccount:
+            effectiveValue.paymentMethod === "Banka"
+              ? (selectedBankPaymentMethod?.bankAccount ?? project.bankAccount)
+              : null,
+          supplierIban:
+            effectiveValue.paymentMethod === "Banka"
+              ? (selectedBankPaymentMethod?.iban ?? project.iban)
+              : null,
+          supplierSwift:
+            effectiveValue.paymentMethod === "Banka"
+              ? (selectedBankPaymentMethod?.swift ?? project.swift)
+              : null,
           customerName: selectedCustomer?.name ?? null,
           customerCompanyName: selectedCustomer?.companyName ?? null,
           customerIco: selectedCustomer?.ico ?? null,
@@ -1145,6 +1451,7 @@ function NewInvoiceComponent() {
   const [nextKey, setNextKey] = useState(2);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const [bankAccountDialogOpen, setBankAccountDialogOpen] = useState(false);
 
   useEffect(() => {
     if (applyVat) return;
@@ -1152,6 +1459,36 @@ function NewInvoiceComponent() {
 
     form.setFieldValue("taxableSupplyDate", formValues.issueDate);
   }, [applyVat, form, formValues.issueDate, formValues.taxableSupplyDate]);
+
+  useEffect(() => {
+    if (
+      formValues.paymentMethod === "Banka" &&
+      !formValues.bankPaymentMethodId &&
+      selectableBankPaymentMethods.length > 0
+    ) {
+      form.setFieldValue(
+        "bankPaymentMethodId",
+        selectableBankPaymentMethods[0]!.id,
+      );
+    }
+
+    if (
+      formValues.paymentMethod !== "Banka" &&
+      formValues.bankPaymentMethodId
+    ) {
+      form.setFieldValue("bankPaymentMethodId", "");
+    }
+
+    if (formValues.paymentMethod !== "Jine" && formValues.customPaymentMethod) {
+      form.setFieldValue("customPaymentMethod", "");
+    }
+  }, [
+    selectableBankPaymentMethods,
+    form,
+    formValues.bankPaymentMethodId,
+    formValues.customPaymentMethod,
+    formValues.paymentMethod,
+  ]);
 
   // Customer dialog
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
@@ -1257,6 +1594,12 @@ function NewInvoiceComponent() {
         open={customerDialogOpen}
         onClose={() => setCustomerDialogOpen(false)}
         onCreated={(id) => form.setFieldValue("customerId", id)}
+        projectId={project.id}
+      />
+      <NewBankAccountDialog
+        open={bankAccountDialogOpen}
+        onClose={() => setBankAccountDialogOpen(false)}
+        onCreated={(id) => form.setFieldValue("bankPaymentMethodId", id)}
         projectId={project.id}
       />
 
@@ -1491,6 +1834,55 @@ function NewInvoiceComponent() {
                 </SelectContent>
               </Select>
             </FieldBlock>
+
+            {formValues.paymentMethod === "Banka" && (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <FieldBlock
+                  label="Bankovní účet"
+                  required
+                  className="flex-1"
+                  error={
+                    hasAttemptedSave && saveValidation.bankPaymentMethodInvalid
+                      ? "Vyberte bankovní účet."
+                      : undefined
+                  }
+                >
+                  <Select
+                    value={formValues.bankPaymentMethodId}
+                    onValueChange={(value) =>
+                      form.setFieldValue("bankPaymentMethodId", value)
+                    }
+                  >
+                    <SelectTrigger
+                      className="w-full"
+                      aria-invalid={
+                        hasAttemptedSave &&
+                        saveValidation.bankPaymentMethodInvalid
+                      }
+                    >
+                      <SelectValue placeholder="Vyberte bankovní účet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectableBankPaymentMethods.map((method) => (
+                        <SelectItem key={method.id} value={method.id}>
+                          {method.name}
+                          {method.bankAccount ? ` (${method.bankAccount})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldBlock>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setBankAccountDialogOpen(true)}
+                  className="gap-1.5 sm:mb-0.5"
+                >
+                  <Plus className="size-4" />
+                  Nový účet
+                </Button>
+              </div>
+            )}
 
             {formValues.paymentMethod === "Jine" && (
               <TextField

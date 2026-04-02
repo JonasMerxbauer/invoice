@@ -274,6 +274,14 @@ function InvoiceDetailComponent() {
   const supplierBankAccount = invoice.supplierBankAccount;
   const supplierIban = invoice.supplierIban;
   const supplierSwift = invoice.supplierSwift;
+  const paymentMethodLabel =
+    paymentMethod?.type === "bank-transfer"
+      ? "Banka"
+      : paymentMethod?.type === "cash"
+        ? "Hotove"
+        : paymentMethod?.name;
+  const bankAccountName =
+    paymentMethod?.type === "bank-transfer" ? paymentMethod.name : null;
   const customerName = invoice.customerName;
   const customerCompanyName = invoice.customerCompanyName;
   const customerIco = invoice.customerIco;
@@ -543,18 +551,26 @@ function InvoiceDetailComponent() {
                   <span className="font-mono">{invoice.specificSymbol}</span>
                 </p>
               )}
-              {paymentMethod?.name && (
+              {paymentMethodLabel && (
                 <p className="text-sm">
                   <span className="text-muted-foreground text-xs">
                     Metoda:{" "}
                   </span>
-                  <span>{paymentMethod.name}</span>
+                  <span>{paymentMethodLabel}</span>
+                </p>
+              )}
+              {bankAccountName && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground text-xs">
+                    Název účtu:{" "}
+                  </span>
+                  <span>{bankAccountName}</span>
                 </p>
               )}
               {!supplierBankAccount &&
                 !supplierIban &&
                 !invoice.variableSymbol &&
-                !paymentMethod?.name && (
+                !paymentMethodLabel && (
                   <p className="text-sm text-muted-foreground italic">
                     Žádné platební údaje
                   </p>
