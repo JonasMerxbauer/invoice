@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { evolu, useEvolu } from "~/evolu";
 import * as Evolu from "@evolu/common";
-import { useQuery } from "@evolu/react";
+import { useQueries } from "@evolu/react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -30,7 +31,7 @@ import {
   Download,
   FileText,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/$projectName/$invoiceId")({
   component: InvoiceDetailComponent,
@@ -189,19 +190,92 @@ function DetailField({
   );
 }
 
-function InvoiceDetailComponent() {
+function InvoiceDetailSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-10 w-28" />
+          <Skeleton className="h-10 w-36" />
+          <Skeleton className="h-10 w-28" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-xl border border-border/50 bg-card p-6"
+          >
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 rounded-md border border-border/50 bg-card p-4 sm:grid-cols-4 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+        ))}
+      </div>
+
+      <Skeleton className="h-px w-full" />
+
+      <section className="space-y-4">
+        <Skeleton className="h-4 w-28" />
+        <div className="rounded-md border border-border/50">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-8 gap-4 border-b border-border/50 px-4 py-4 last:border-b-0"
+            >
+              <Skeleton className="h-4 w-6" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="ml-auto h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function InvoiceDetailContent() {
   const { projectName, invoiceId } = Route.useParams();
   const { update } = useEvolu();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
   const [actionError, setActionError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  const invoices = useQuery(allInvoices);
-  const invoiceItems = useQuery(allInvoiceItems);
-  const projects = useQuery(allProjects);
-  const paymentMethods = useQuery(allPaymentMethods);
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
+  const [invoices, invoiceItems, projects, paymentMethods] = useQueries([
+    allInvoices,
+    allInvoiceItems,
+    allProjects,
+    allPaymentMethods,
+  ]);
 
   const invoice = useMemo(
     () => invoices.find((inv) => inv.id === invoiceId),
@@ -231,6 +305,10 @@ function InvoiceDetailComponent() {
         : null,
     [paymentMethods, invoice],
   );
+
+  if (!invoice && !hasHydrated) {
+    return <InvoiceDetailSkeleton />;
+  }
 
   if (!invoice) {
     return (
@@ -785,5 +863,13 @@ function InvoiceDetailComponent() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function InvoiceDetailComponent() {
+  return (
+    <Suspense fallback={<InvoiceDetailSkeleton />}>
+      <InvoiceDetailContent />
+    </Suspense>
   );
 }

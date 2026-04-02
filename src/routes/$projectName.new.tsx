@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { evolu, useEvolu } from "~/evolu";
 import * as Evolu from "@evolu/common";
-import { useQuery } from "@evolu/react";
+import { useQueries } from "@evolu/react";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
 import { Separator } from "~/components/ui/separator";
 import {
@@ -40,6 +41,7 @@ import {
   useState,
   useMemo,
   useCallback,
+  Suspense,
   type ComponentProps,
   type ReactNode,
 } from "react";
@@ -1158,17 +1160,63 @@ function DatePickerField({
   );
 }
 
+function NewInvoiceSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-44" />
+        <Skeleton className="h-4 w-52" />
+        <Skeleton className="h-3 w-44" />
+      </div>
+
+      <div className="space-y-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <section key={index} className="space-y-4">
+            <Skeleton className="h-4 w-28" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="rounded-md border border-border/50">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-5 gap-4 border-b border-border/50 px-4 py-4 last:border-b-0"
+          >
+            <Skeleton className="col-span-2 h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between pb-8 pt-4">
+        <Skeleton className="h-4 w-52" />
+        <Skeleton className="h-11 w-40" />
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ──────────────────────────────────────────────────
-function NewInvoiceComponent() {
+function NewInvoiceContent() {
   const { projectName } = Route.useParams();
   const decodedName = decodeURIComponent(projectName);
   const navigate = useNavigate();
   const { insert } = useEvolu();
 
-  const projects = useQuery(allProjects);
-  const customers = useQuery(allCustomers);
-  const existingInvoices = useQuery(allInvoices);
-  const paymentMethods = useQuery(allPaymentMethods);
+  const [projects, customers, existingInvoices, paymentMethods] = useQueries([
+    allProjects,
+    allCustomers,
+    allInvoices,
+    allPaymentMethods,
+  ]);
 
   const project = useMemo(
     () => projects.find((p) => p.name === decodedName),
@@ -2179,5 +2227,13 @@ function NewInvoiceComponent() {
         </div>
       </div>
     </form>
+  );
+}
+
+function NewInvoiceComponent() {
+  return (
+    <Suspense fallback={<NewInvoiceSkeleton />}>
+      <NewInvoiceContent />
+    </Suspense>
   );
 }

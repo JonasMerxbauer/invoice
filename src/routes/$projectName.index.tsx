@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { evolu } from "~/evolu";
-import { useQuery } from "@evolu/react";
+import { useQueries } from "@evolu/react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Plus, FileText, Receipt } from "lucide-react";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 
 const allProjects = evolu.createQuery((db) =>
   db.selectFrom("project").selectAll().where("isDeleted", "is", null),
@@ -102,11 +103,56 @@ function formatCurrency(
   }
 }
 
-function RouteComponent() {
+function ProjectInvoicesSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      <div className="rounded-md border border-border/50 bg-card p-4">
+        <div className="grid gap-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-7 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Skeleton className="h-px w-full" />
+
+      <section className="space-y-4">
+        <Skeleton className="h-4 w-16" />
+        <div className="rounded-md border border-border/50">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-6 gap-4 border-b border-border/50 px-4 py-4 last:border-b-0"
+            >
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="ml-auto h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ProjectInvoicesContent() {
   const { projectName } = Route.useParams();
   const decodedName = decodeURIComponent(projectName);
-  const projects = useQuery(allProjects);
-  const invoices = useQuery(allInvoices);
+  const [projects, invoices] = useQueries([allProjects, allInvoices]);
 
   // Find the project by name
   const project = useMemo(
@@ -142,12 +188,10 @@ function RouteComponent() {
   const paidCount = projectInvoices.filter(
     (inv) => getInvoiceDisplayStatus(inv) === "paid",
   ).length;
-  const unpaidCount = projectInvoices.filter(
-    (inv) => {
-      const status = getInvoiceDisplayStatus(inv);
-      return status === "issued" || status === "overdue";
-    },
-  ).length;
+  const unpaidCount = projectInvoices.filter((inv) => {
+    const status = getInvoiceDisplayStatus(inv);
+    return status === "issued" || status === "overdue";
+  }).length;
 
   return (
     <div>
@@ -313,5 +357,13 @@ function RouteComponent() {
         )}
       </section>
     </div>
+  );
+}
+
+function RouteComponent() {
+  return (
+    <Suspense fallback={<ProjectInvoicesSkeleton />}>
+      <ProjectInvoicesContent />
+    </Suspense>
   );
 }
