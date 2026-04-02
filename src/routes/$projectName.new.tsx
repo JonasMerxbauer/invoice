@@ -63,6 +63,10 @@ const allInvoices = evolu.createQuery((db) =>
     .where("isDeleted", "is", null),
 );
 
+const allPaymentMethods = evolu.createQuery((db) =>
+  db.selectFrom("paymentMethod").selectAll().where("isDeleted", "is", null),
+);
+
 // ── Line item state ──────────────────────────────────────────────────
 interface LineItem {
   key: number;
@@ -409,12 +413,20 @@ interface InvoiceFormValues {
   dueDate: string;
   currency: string;
   vatMode: string;
+  paymentMethod: string;
+  customPaymentMethod: string;
   variableSymbol: string;
   constantSymbol: string;
   specificSymbol: string;
   note: string;
   items: LineItem[];
 }
+
+const paymentMethodOptions = ["Banka", "Hotove", "Jine"] as const;
+
+const paymentMethodSchema = z.enum(paymentMethodOptions, {
+  error: "Vyberte platební metodu.",
+});
 
 interface PreparedInvoiceItem {
   sortOrder: number;
@@ -445,6 +457,8 @@ interface InvoiceSaveValidation {
   issueDateInvalid: boolean;
   taxableSupplyDateInvalid: boolean;
   dueDateInvalid: boolean;
+  paymentMethodInvalid: boolean;
+  customPaymentMethodInvalid: boolean;
   variableSymbolInvalid: boolean;
   constantSymbolInvalid: boolean;
   specificSymbolInvalid: boolean;
@@ -510,29 +524,50 @@ const lineItemSchema = z.object({
   }, "DPH musí být 0 nebo více."),
 });
 
-const invoiceFormSchema = z.object({
-  invoiceNumber: z.string().trim().max(100, "Číslo faktury je příliš dlouhé."),
-  customerId: z.string().min(1, "Vyberte odběratele."),
-  issueDate: dateIsoSchema,
-  taxableSupplyDate: dateIsoSchema,
-  dueDate: dateIsoSchema,
-  currency: z.string().min(1, "Vyberte měnu."),
-  vatMode: z.enum(["none", "standard", "reverse-charge"]),
-  variableSymbol: optionalDigits(
-    10,
-    "Variabilní symbol může obsahovat jen číslice a max. 10 znaků.",
-  ),
-  constantSymbol: optionalDigits(
-    4,
-    "Konstantní symbol může obsahovat jen číslice a max. 4 znaky.",
-  ),
-  specificSymbol: optionalDigits(
-    10,
-    "Specifický symbol může obsahovat jen číslice a max. 10 znaků.",
-  ),
-  note: z.string().max(1000, "Poznámka je příliš dlouhá."),
-  items: z.array(lineItemSchema).min(1, "Přidejte alespoň jednu položku."),
-});
+const invoiceFormSchema = z
+  .object({
+    invoiceNumber: z
+      .string()
+      .trim()
+      .max(100, "Číslo faktury je příliš dlouhé."),
+    customerId: z.string().min(1, "Vyberte odběratele."),
+    issueDate: dateIsoSchema,
+    taxableSupplyDate: dateIsoSchema,
+    dueDate: dateIsoSchema,
+    currency: z.string().min(1, "Vyberte měnu."),
+    vatMode: z.enum(["none", "standard", "reverse-charge"]),
+    paymentMethod: paymentMethodSchema,
+    customPaymentMethod: z
+      .string()
+      .trim()
+      .max(100, "Platební metoda může mít max. 100 znaků."),
+    variableSymbol: optionalDigits(
+      10,
+      "Variabilní symbol může obsahovat jen číslice a max. 10 znaků.",
+    ),
+    constantSymbol: optionalDigits(
+      4,
+      "Konstantní symbol může obsahovat jen číslice a max. 4 znaky.",
+    ),
+    specificSymbol: optionalDigits(
+      10,
+      "Specifický symbol může obsahovat jen číslice a max. 10 znaků.",
+    ),
+    note: z.string().max(1000, "Poznámka je příliš dlouhá."),
+    items: z.array(lineItemSchema).min(1, "Přidejte alespoň jednu položku."),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.paymentMethod === "Jine" &&
+      values.customPaymentMethod.trim().length === 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["customPaymentMethod"],
+        message: "Doplňte platební metodu.",
+      });
+    }
+  });
 
 const customerFormSchema = z.object({
   name: z
@@ -766,6 +801,16 @@ function validateInvoiceForm(
     formResult.success === false &&
     formResult.error.issues.some((issue) => issue.path[0] === "variableSymbol"),
   );
+  const paymentMethodInvalid = Boolean(
+    formResult.success === false &&
+    formResult.error.issues.some((issue) => issue.path[0] === "paymentMethod"),
+  );
+  const customPaymentMethodInvalid = Boolean(
+    formResult.success === false &&
+    formResult.error.issues.some(
+      (issue) => issue.path[0] === "customPaymentMethod",
+    ),
+  );
   const constantSymbolInvalid = Boolean(
     formResult.success === false &&
     formResult.error.issues.some((issue) => issue.path[0] === "constantSymbol"),
@@ -819,6 +864,8 @@ function validateInvoiceForm(
         formResult.success === false &&
         formResult.error.issues.some((issue) => issue.path[0] === "dueDate"),
       ),
+    paymentMethodInvalid,
+    customPaymentMethodInvalid,
     variableSymbolInvalid,
     constantSymbolInvalid,
     specificSymbolInvalid,
@@ -869,6 +916,7 @@ function NewInvoiceComponent() {
   const projects = useQuery(allProjects);
   const customers = useQuery(allCustomers);
   const existingInvoices = useQuery(allInvoices);
+  const paymentMethods = useQuery(allPaymentMethods);
 
   const project = useMemo(
     () => projects.find((p) => p.name === decodedName),
@@ -904,6 +952,8 @@ function NewInvoiceComponent() {
       dueDate: addDays(today, 14),
       currency: "CZK",
       vatMode: "standard",
+      paymentMethod: "Banka",
+      customPaymentMethod: "",
       variableSymbol: "",
       constantSymbol: "",
       specificSymbol: "",
@@ -963,12 +1013,50 @@ function NewInvoiceComponent() {
       const selectedCustomer = projectCustomers.find(
         (customer) => customer.id === effectiveValue.customerId,
       );
+      const resolvedPaymentMethodName =
+        effectiveValue.paymentMethod === "Jine"
+          ? effectiveValue.customPaymentMethod.trim()
+          : effectiveValue.paymentMethod;
+
+      const existingPaymentMethod = paymentMethods.find(
+        (method) =>
+          method.projectId === project.id &&
+          method.name === resolvedPaymentMethodName,
+      );
+
+      let paymentMethodId = existingPaymentMethod?.id ?? null;
 
       try {
+        if (!paymentMethodId) {
+          const paymentMethodType =
+            effectiveValue.paymentMethod === "Hotove"
+              ? "cash"
+              : "bank-transfer";
+          const paymentMethodResult = insert("paymentMethod", {
+            projectId: project.id,
+            name: resolvedPaymentMethodName,
+            type: paymentMethodType,
+            bankAccount:
+              paymentMethodType === "bank-transfer"
+                ? project.bankAccount
+                : null,
+            iban: paymentMethodType === "bank-transfer" ? project.iban : null,
+            swift: paymentMethodType === "bank-transfer" ? project.swift : null,
+            isDefault: false,
+          } as any);
+
+          if (!paymentMethodResult.ok) {
+            setSaveError("Platební metodu se nepodařilo uložit.");
+            return;
+          }
+
+          paymentMethodId = paymentMethodResult.value.id;
+        }
+
         const invoiceResult = insert("invoice", {
           projectId: project.id,
           customerId: effectiveValue.customerId as any,
-          paymentMethodId: null,
+          paymentMethodId,
           invoiceNumber: validation.invoiceNumber,
           issueDate: validation.issueDate,
           taxableSupplyDate: validation.taxableSupplyDate,
@@ -1362,6 +1450,65 @@ function NewInvoiceComponent() {
               invalid={hasAttemptedSave && saveValidation.dueDateInvalid}
               className={!applyVat ? "sm:max-w-xs" : undefined}
             />
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ── Section: Platebni metoda ─────────────────────────────── */}
+        <section>
+          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-4">
+            Platební metoda
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+            <FieldBlock
+              label="Způsob úhrady"
+              required
+              error={
+                hasAttemptedSave && saveValidation.paymentMethodInvalid
+                  ? "Vyberte platební metodu."
+                  : undefined
+              }
+            >
+              <Select
+                value={formValues.paymentMethod}
+                onValueChange={(value) =>
+                  form.setFieldValue("paymentMethod", value)
+                }
+              >
+                <SelectTrigger
+                  className="w-full"
+                  aria-invalid={
+                    hasAttemptedSave && saveValidation.paymentMethodInvalid
+                  }
+                >
+                  <SelectValue placeholder="Vyberte platební metodu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Banka">Banka</SelectItem>
+                  <SelectItem value="Hotove">Hotove</SelectItem>
+                  <SelectItem value="Jine">Jine</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldBlock>
+
+            {formValues.paymentMethod === "Jine" && (
+              <TextField
+                label="Platební metoda"
+                required
+                value={formValues.customPaymentMethod}
+                onChange={(e) =>
+                  form.setFieldValue("customPaymentMethod", e.target.value)
+                }
+                placeholder="Např. Kartou"
+                className="font-serif"
+                error={
+                  hasAttemptedSave && saveValidation.customPaymentMethodInvalid
+                    ? "Doplňte platební metodu."
+                    : undefined
+                }
+              />
+            )}
           </div>
         </section>
 

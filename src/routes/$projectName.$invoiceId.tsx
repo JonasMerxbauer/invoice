@@ -52,6 +52,10 @@ const allProjects = evolu.createQuery((db) =>
   db.selectFrom("project").selectAll().where("isDeleted", "is", null),
 );
 
+const allPaymentMethods = evolu.createQuery((db) =>
+  db.selectFrom("paymentMethod").selectAll().where("isDeleted", "is", null),
+);
+
 type PersistedInvoiceStatus =
   | "draft"
   | "issued"
@@ -197,6 +201,7 @@ function InvoiceDetailComponent() {
   const invoices = useQuery(allInvoices);
   const invoiceItems = useQuery(allInvoiceItems);
   const projects = useQuery(allProjects);
+  const paymentMethods = useQuery(allPaymentMethods);
 
   const invoice = useMemo(
     () => invoices.find((inv) => inv.id === invoiceId),
@@ -217,6 +222,14 @@ function InvoiceDetailComponent() {
         ? projects.find((p) => p.id === invoice.projectId)
         : null,
     [projects, invoice],
+  );
+
+  const paymentMethod = useMemo(
+    () =>
+      invoice?.paymentMethodId
+        ? paymentMethods.find((method) => method.id === invoice.paymentMethodId)
+        : null,
+    [paymentMethods, invoice],
   );
 
   if (!invoice) {
@@ -530,9 +543,18 @@ function InvoiceDetailComponent() {
                   <span className="font-mono">{invoice.specificSymbol}</span>
                 </p>
               )}
+              {paymentMethod?.name && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground text-xs">
+                    Metoda:{" "}
+                  </span>
+                  <span>{paymentMethod.name}</span>
+                </p>
+              )}
               {!supplierBankAccount &&
                 !supplierIban &&
-                !invoice.variableSymbol && (
+                !invoice.variableSymbol &&
+                !paymentMethod?.name && (
                   <p className="text-sm text-muted-foreground italic">
                     Žádné platební údaje
                   </p>
