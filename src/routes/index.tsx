@@ -651,10 +651,12 @@ function AppContent() {
                 </p>
               </div>
 
-              <Button onClick={() => setCreateOpen(true)} className="gap-2">
-                <Plus className="size-4" />
-                Přidat projekt
-              </Button>
+              {projects.length > 0 ? (
+                <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  Přidat projekt
+                </Button>
+              ) : null}
             </div>
           </div>
         </header>
