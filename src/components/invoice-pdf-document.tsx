@@ -33,6 +33,7 @@ export type InvoicePdfInvoice = {
   customerStreet: string | null;
   customerCity: string | null;
   customerPostalCode: string | null;
+  customerCountry: string | null;
 };
 
 export type InvoicePdfItem = {
@@ -372,6 +373,7 @@ export function InvoicePdfDocument({
     street: invoice.customerStreet,
     postalCode: invoice.customerPostalCode,
     city: invoice.customerCity,
+    country: invoice.customerCountry,
   });
 
   const paymentLines = [

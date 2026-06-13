@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
 import { evolu, useEvolu } from "~/evolu";
 import * as Evolu from "@evolu/common";
 import { useQueries } from "@evolu/react";
@@ -34,6 +35,7 @@ import {
 } from "~/components/ui/table";
 import { useForm, useStore } from "@tanstack/react-form-start";
 import { cn } from "~/lib/utils";
+import type { CompanyLookupResult } from "~/lib/company-registry";
 import { z } from "zod";
 import { AlertCircle, Plus, Trash2, Save, UserPlus } from "lucide-react";
 import {
@@ -122,11 +124,13 @@ function NewCustomerDialog({
   onClose,
   onCreated,
   projectId,
+  customers,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
   projectId: string;
+  customers: Array<{ id: string; ico: string | null }>;
 }) {
   const { insert } = useEvolu();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -140,6 +144,7 @@ function NewCustomerDialog({
       street: "",
       city: "",
       postalCode: "",
+      country: "",
       email: "",
     } satisfies CustomerFormValues,
     validators: {
@@ -168,7 +173,7 @@ function NewCustomerDialog({
         street: value.street.trim() || null,
         city: value.city.trim() || null,
         postalCode: value.postalCode.trim() || null,
-        country: null,
+        country: value.country.trim() || null,
         email: value.email.trim() || null,
         phone: null,
         note: null,
@@ -214,6 +219,29 @@ function NewCustomerDialog({
   const customerFieldInvalid = (field: keyof CustomerFormValues) =>
     hasAttemptedSave && customerErrors.has(field);
 
+  const applyCompanyLookupResult = (result: CompanyLookupResult) => {
+    const existingCustomer = customers.find(
+      (customer) => customer.ico === result.ico,
+    );
+
+    if (existingCustomer) {
+      onCreated(existingCustomer.id);
+      customerForm.reset();
+      setHasAttemptedSave(false);
+      setSaveError(null);
+      onClose();
+      return;
+    }
+
+    customerForm.setFieldValue("name", result.name);
+    customerForm.setFieldValue("ico", result.ico);
+    customerForm.setFieldValue("dic", result.dic ?? "");
+    customerForm.setFieldValue("street", result.street ?? "");
+    customerForm.setFieldValue("city", result.city ?? "");
+    customerForm.setFieldValue("postalCode", result.postalCode ?? "");
+    customerForm.setFieldValue("country", result.country ?? "");
+  };
+
   const handleSave = () => {
     setHasAttemptedSave(true);
     setSaveError(null);
@@ -247,13 +275,12 @@ function NewCustomerDialog({
 
         <div className="grid gap-4 py-2">
           <div className="grid grid-cols-2 gap-3">
-            <TextField
+            <CompanyRegistryLookupInput
               label="Název"
               required
               value={customerValues.name}
-              onChange={(e) =>
-                customerForm.setFieldValue("name", e.target.value)
-              }
+              onChange={(value) => customerForm.setFieldValue("name", value)}
+              onSelect={applyCompanyLookupResult}
               placeholder="Název firmy / jméno"
               className="font-serif"
               error={
@@ -278,12 +305,11 @@ function NewCustomerDialog({
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <TextField
+            <CompanyRegistryLookupInput
               label="IČO"
               value={customerValues.ico}
-              onChange={(e) =>
-                customerForm.setFieldValue("ico", e.target.value)
-              }
+              onChange={(value) => customerForm.setFieldValue("ico", value)}
+              onSelect={applyCompanyLookupResult}
               placeholder="12345678"
               className="font-mono"
               error={
@@ -346,6 +372,20 @@ function NewCustomerDialog({
               error={
                 customerFieldInvalid("postalCode")
                   ? customerErrors.get("postalCode")
+                : undefined
+              }
+            />
+            <TextField
+              label="Stát"
+              value={customerValues.country}
+              onChange={(e) =>
+                customerForm.setFieldValue("country", e.target.value)
+              }
+              className="font-serif"
+              wrapperClassName="col-span-2"
+              error={
+                customerFieldInvalid("country")
+                  ? customerErrors.get("country")
                   : undefined
               }
             />
@@ -485,6 +525,7 @@ interface CustomerFormValues {
   street: string;
   city: string;
   postalCode: string;
+  country: string;
   email: string;
 }
 
@@ -609,6 +650,7 @@ const customerFormSchema = z.object({
   street: z.string().trim().max(100, "Ulice může mít max. 100 znaků."),
   city: z.string().trim().max(100, "Město může mít max. 100 znaků."),
   postalCode: z.string().trim().max(20, "PSČ může mít max. 20 znaků."),
+  country: z.string().trim().max(100, "Stát může mít max. 100 znaků."),
   email: z
     .string()
     .trim()
@@ -1444,6 +1486,7 @@ function NewInvoiceContent() {
           customerStreet: selectedCustomer?.street ?? null,
           customerCity: selectedCustomer?.city ?? null,
           customerPostalCode: selectedCustomer?.postalCode ?? null,
+          customerCountry: selectedCustomer?.country ?? null,
         } as any);
 
         if (!invoiceResult.ok) {
@@ -1643,6 +1686,7 @@ function NewInvoiceContent() {
         onClose={() => setCustomerDialogOpen(false)}
         onCreated={(id) => form.setFieldValue("customerId", id)}
         projectId={project.id}
+        customers={projectCustomers}
       />
       <NewBankAccountDialog
         open={bankAccountDialogOpen}

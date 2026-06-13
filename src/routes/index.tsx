@@ -3,6 +3,7 @@ import { useQuery } from "@evolu/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Pencil, Plus, FileText, Building2 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -32,6 +33,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
 import { evolu, useEvolu } from "~/evolu";
+import type { CompanyLookupResult } from "~/lib/company-registry";
 
 const allProjects = evolu.createQuery((db) =>
   db
@@ -192,6 +194,19 @@ function ProjectDialog({
     });
   };
 
+  const applyCompanyLookupResult = (result: CompanyLookupResult) => {
+    setValues((current) => ({
+      ...current,
+      companyName: result.name,
+      ico: result.ico,
+      dic: result.dic ?? "",
+      street: result.street ?? "",
+      city: result.city ?? "",
+      postalCode: result.postalCode ?? "",
+      country: result.country ?? "",
+    }));
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaveError(null);
@@ -282,18 +297,20 @@ function ProjectDialog({
                   onChange={(value) => handleFieldChange("name", value)}
                   placeholder="Například Webdesign 2026"
                 />
-                <ProjectInput
+                <CompanyRegistryLookupInput
                   label="Obchodní jméno"
                   required
                   value={values.companyName}
                   onChange={(value) => handleFieldChange("companyName", value)}
+                  onSelect={applyCompanyLookupResult}
                   placeholder="Firma nebo OSVČ"
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <ProjectInput
+                  <CompanyRegistryLookupInput
                     label="IČO"
                     value={values.ico}
                     onChange={(value) => handleFieldChange("ico", value)}
+                    onSelect={applyCompanyLookupResult}
                     placeholder="12345678"
                     className="font-mono"
                   />

@@ -133,6 +133,7 @@ export const Schema = {
     customerStreet: Evolu.nullOr(Evolu.TrimmedString100),
     customerCity: Evolu.nullOr(Evolu.TrimmedString100),
     customerPostalCode: Evolu.nullOr(PostalCode),
+    customerCountry: Evolu.nullOr(Evolu.TrimmedString100),
   },
   invoiceItem: {
     id: InvoiceItemId,
