@@ -697,10 +697,15 @@ function AppContent() {
               {projects.map((project) => (
                 <Card
                   key={project.id}
-                  className="flex h-full flex-col transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                  className="relative flex h-full flex-col transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                 >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-3">
+                  <Link
+                    to="/$projectName"
+                    params={{ projectName: project.name ?? "" }}
+                    className="flex h-full flex-col rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label={`Zobrazit faktury projektu ${project.name ?? ""}`}
+                  >
+                    <CardHeader className="pb-2 pr-14">
                       <div className="min-w-0 space-y-1">
                         <CardTitle className="truncate font-serif text-lg">
                           {project.name}
@@ -712,53 +717,49 @@ function AppContent() {
                           </span>
                         </CardDescription>
                       </div>
+                    </CardHeader>
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="shrink-0"
-                        onClick={() => setEditingProjectId(project.id)}
-                        aria-label={`Upravit projekt ${project.name ?? ""}`}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
+                    <CardContent className="flex flex-1 flex-col justify-between gap-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-mono text-muted-foreground">
+                            {project.defaultCurrency}
+                          </span>
+                          <span className="text-right text-muted-foreground">
+                            {vatModeLabel(project.vatMode)}
+                          </span>
+                        </div>
 
-                  <CardContent className="flex flex-1 flex-col justify-between gap-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono text-muted-foreground">
-                          {project.defaultCurrency}
-                        </span>
-                        <span className="text-right text-muted-foreground">
-                          {vatModeLabel(project.vatMode)}
-                        </span>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          {project.ico ? (
+                            <span className="font-mono">IČO: {project.ico}</span>
+                          ) : null}
+                          {project.city ? <span>{project.city}</span> : null}
+                          {project.email ? (
+                            <span className="font-mono">{project.email}</span>
+                          ) : null}
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        {project.ico ? (
-                          <span className="font-mono">IČO: {project.ico}</span>
-                        ) : null}
-                        {project.city ? <span>{project.city}</span> : null}
-                        {project.email ? (
-                          <span className="font-mono">{project.email}</span>
-                        ) : null}
+                      <div className="inline-flex items-center gap-1.5 text-xs text-primary/80 transition-colors hover:text-primary">
+                        <FileText className="size-3" />
+                        <span className="font-serif italic">
+                          Zobrazit faktury
+                        </span>
                       </div>
-                    </div>
+                    </CardContent>
+                  </Link>
 
-                    <Link
-                      to="/$projectName"
-                      params={{ projectName: project.name ?? "" }}
-                      className="inline-flex items-center gap-1.5 text-xs text-primary/80 transition-colors hover:text-primary"
-                    >
-                      <FileText className="size-3" />
-                      <span className="font-serif italic">
-                        Zobrazit faktury
-                      </span>
-                    </Link>
-                  </CardContent>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute right-4 top-4 z-10"
+                    onClick={() => setEditingProjectId(project.id)}
+                    aria-label={`Upravit projekt ${project.name ?? ""}`}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
                 </Card>
               ))}
             </div>
