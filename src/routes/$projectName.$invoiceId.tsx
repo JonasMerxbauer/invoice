@@ -847,6 +847,7 @@ function InvoiceDetailContent() {
               <iframe
                 src={`${pdfPreviewUrl}#navpanes=0`}
                 title="Náhled PDF faktury"
+                sandbox="allow-downloads allow-scripts"
                 className="h-full w-full bg-muted"
               />
             </div>
