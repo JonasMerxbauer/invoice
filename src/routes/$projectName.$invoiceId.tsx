@@ -595,6 +595,12 @@ function InvoiceDetailContent() {
                   <span className="font-mono">{supplierBankAccount}</span>
                 </p>
               )}
+              {invoice.variableSymbol && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground text-xs">VS: </span>
+                  <span className="font-mono">{invoice.variableSymbol}</span>
+                </p>
+              )}
               {supplierIban && (
                 <p className="text-sm">
                   <span className="text-muted-foreground text-xs">IBAN: </span>
@@ -605,12 +611,6 @@ function InvoiceDetailContent() {
                 <p className="text-sm">
                   <span className="text-muted-foreground text-xs">SWIFT: </span>
                   <span className="font-mono">{supplierSwift}</span>
-                </p>
-              )}
-              {invoice.variableSymbol && (
-                <p className="text-sm">
-                  <span className="text-muted-foreground text-xs">VS: </span>
-                  <span className="font-mono">{invoice.variableSymbol}</span>
                 </p>
               )}
               {invoice.constantSymbol && (
@@ -657,8 +657,8 @@ function InvoiceDetailContent() {
         <div
           className={`grid grid-cols-2 gap-4 mb-8 rounded-md border border-border/50 bg-card p-4 ${
             showVatMeta
-              ? "sm:grid-cols-4 lg:grid-cols-6"
-              : "sm:grid-cols-2 lg:grid-cols-4"
+              ? "sm:grid-cols-3 lg:grid-cols-5"
+              : "sm:grid-cols-2 lg:grid-cols-3"
           }`}
         >
           <DetailField
@@ -681,7 +681,6 @@ function InvoiceDetailContent() {
               value={formatDate(invoice.paidDate)}
             />
           )}
-          <DetailField label="Měna" value={currencyStr} mono />
           {showVatMeta && (
             <DetailField
               label="Režim DPH"
@@ -763,28 +762,32 @@ function InvoiceDetailContent() {
                 ))}
               </TableBody>
               <TableFooter>
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-right font-mono text-xs uppercase tracking-wider"
-                  >
-                    Základ
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-medium">
-                    {formatCurrency(invoice.subtotal, currencyStr)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-right font-mono text-xs uppercase tracking-wider"
-                  >
-                    DPH celkem
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-medium">
-                    {formatCurrency(invoice.vatTotal, currencyStr)}
-                  </TableCell>
-                </TableRow>
+                {showVatMeta && (
+                  <>
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-right font-mono text-xs uppercase tracking-wider"
+                      >
+                        Základ
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-medium">
+                        {formatCurrency(invoice.subtotal, currencyStr)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-right font-mono text-xs uppercase tracking-wider"
+                      >
+                        DPH celkem
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-medium">
+                        {formatCurrency(invoice.vatTotal, currencyStr)}
+                      </TableCell>
+                    </TableRow>
+                  </>
+                )}
                 <TableRow>
                   <TableCell
                     colSpan={7}

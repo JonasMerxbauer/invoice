@@ -1452,7 +1452,8 @@ function NewInvoiceContent() {
           status: "issued",
           currency: effectiveValue.currency as Evolu.CurrencyCode,
           vatMode: project.vatMode,
-          variableSymbol: effectiveValue.variableSymbol.trim() || null,
+          variableSymbol:
+            effectiveValue.variableSymbol.trim() || validation.invoiceNumber,
           constantSymbol: effectiveValue.constantSymbol.trim() || null,
           specificSymbol: effectiveValue.specificSymbol.trim() || null,
           subtotal: validation.subtotal,
