@@ -1,8 +1,8 @@
 import * as Evolu from "@evolu/common";
 import { useQuery } from "@evolu/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pencil, Plus, FileText, Building2 } from "lucide-react";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Pencil, Plus, FileText, Building2, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
 import { Button } from "~/components/ui/button";
 import {
@@ -22,7 +22,6 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Skeleton } from "~/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -253,6 +252,30 @@ function ProjectDialog({
       setSaveError(
         "Projekt se nepodařilo uložit. Zkontrolujte formát vyplněných hodnot.",
       );
+      return;
+    }
+
+    onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (!isEditing || !project?.id) return;
+
+    const confirmed = window.confirm(
+      `Opravdu chcete smazat projekt ${project.name ?? ""}?`,
+    );
+
+    if (!confirmed) return;
+
+    setSaveError(null);
+
+    const result = update("project", {
+      id: project.id,
+      isDeleted: Evolu.sqliteTrue,
+    } as any);
+
+    if (!result.ok) {
+      setSaveError("Projekt se nepodařilo smazat.");
       return;
     }
 
@@ -492,6 +515,17 @@ function ProjectDialog({
           </section>
 
           <DialogFooter>
+            {isEditing ? (
+              <Button
+                type="button"
+                variant="destructive"
+                className="gap-2 sm:mr-auto"
+                onClick={handleDelete}
+              >
+                <Trash2 className="size-4" />
+                Smazat projekt
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -576,54 +610,6 @@ function ProjectSelect({
           ))}
         </SelectContent>
       </Select>
-    </div>
-  );
-}
-
-function HomePageSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50">
-        <div className="mx-auto max-w-5xl px-6 py-8">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div className="space-y-3">
-              <Skeleton className="h-9 w-44" />
-              <Skeleton className="h-4 w-56" />
-            </div>
-            <Skeleton className="h-10 w-36" />
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-10 space-y-3">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-5 w-96 max-w-full" />
-        </div>
-
-        <Skeleton className="mb-10 h-px w-full" />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="rounded-xl border border-border/50 bg-card p-6"
-            >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-6 w-2/3" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                </div>
-                <Skeleton className="h-4 w-28" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
     </div>
   );
 }

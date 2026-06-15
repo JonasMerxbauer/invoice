@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ProjectSettingsDialog } from "~/components/project-settings-dialog";
 import { evolu } from "~/evolu";
 import { useQueries } from "@evolu/react";
 import { Button } from "~/components/ui/button";
@@ -13,8 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { Plus, FileText, Receipt } from "lucide-react";
-import { Suspense, useMemo } from "react";
+import { FileText, Pencil, Plus, Receipt } from "lucide-react";
+import { Suspense, useMemo, useState } from "react";
 
 const allProjects = evolu.createQuery((db) =>
   db.selectFrom("project").selectAll().where("isDeleted", "is", null),
@@ -26,6 +27,14 @@ const allInvoices = evolu.createQuery((db) =>
     .selectAll()
     .where("isDeleted", "is", null)
     .orderBy("issueDate", "desc"),
+);
+
+const allCustomers = evolu.createQuery((db) =>
+  db.selectFrom("customer").selectAll().where("isDeleted", "is", null),
+);
+
+const allPaymentMethods = evolu.createQuery((db) =>
+  db.selectFrom("paymentMethod").selectAll().where("isDeleted", "is", null),
 );
 
 export const Route = createFileRoute("/$projectName/")({
@@ -151,8 +160,15 @@ function ProjectInvoicesSkeleton() {
 
 function ProjectInvoicesContent() {
   const { projectName } = Route.useParams();
+  const navigate = useNavigate();
   const decodedName = decodeURIComponent(projectName);
-  const [projects, invoices] = useQueries([allProjects, allInvoices]);
+  const [projects, invoices, customers, paymentMethods] = useQueries([
+    allProjects,
+    allInvoices,
+    allCustomers,
+    allPaymentMethods,
+  ]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Find the project by name
   const project = useMemo(
@@ -166,6 +182,10 @@ function ProjectInvoicesContent() {
       project ? invoices.filter((inv) => inv.projectId === project.id) : [],
     [invoices, project],
   );
+
+  const handleProjectRenamed = (name: string) => {
+    void navigate({ to: "/$projectName", params: { projectName: name } });
+  };
 
   if (!project) {
     return (
@@ -195,8 +215,17 @@ function ProjectInvoicesContent() {
 
   return (
     <div>
+      <ProjectSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        project={project}
+        customers={customers}
+        paymentMethods={paymentMethods}
+        onProjectRenamed={handleProjectRenamed}
+      />
+
       {/* Project header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between gap-4 mb-8">
         <div>
           <h1 className="font-serif text-2xl font-bold tracking-tight mb-1">
             {project.name}
@@ -208,12 +237,23 @@ function ProjectInvoicesContent() {
             )}
           </p>
         </div>
-        <Link to="/$projectName/new" params={{ projectName }}>
-          <Button className="gap-2">
-            <Plus className="size-4" />
-            Nová faktura
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Pencil className="size-4" />
+            Upravit projekt
           </Button>
-        </Link>
+          <Link to="/$projectName/new" params={{ projectName }}>
+            <Button className="gap-2">
+              <Plus className="size-4" />
+              Nová faktura
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Summary strip */}
