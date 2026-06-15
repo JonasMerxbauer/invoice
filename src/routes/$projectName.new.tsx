@@ -1429,7 +1429,7 @@ function NewInvoiceContent() {
               paymentMethodType === "bank-transfer"
                 ? (selectedBankPaymentMethod?.swift ?? project.swift)
                 : null,
-            isDefault: false,
+            isDefault: Evolu.sqliteFalse,
           } as any);
 
           if (!paymentMethodResult.ok) {

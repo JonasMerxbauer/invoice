@@ -4,6 +4,7 @@ import {
   type InvoicePdfInvoice,
   type InvoicePdfItem,
 } from "~/components/invoice-pdf-document";
+import { createQrPaymentDataUrl } from "~/lib/qr-payment";
 
 let pdfFontsRegistered = false;
 
@@ -74,6 +75,13 @@ export async function generateInvoicePdfBlob({
   items: InvoicePdfItem[];
 }) {
   ensurePdfFontsRegistered();
+  const qrPaymentDataUrl = await createQrPaymentDataUrl(invoice);
 
-  return pdf(<InvoicePdfDocument invoice={invoice} items={items} />).toBlob();
+  return pdf(
+    <InvoicePdfDocument
+      invoice={invoice}
+      items={items}
+      qrPaymentDataUrl={qrPaymentDataUrl}
+    />,
+  ).toBlob();
 }

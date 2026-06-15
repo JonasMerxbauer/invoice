@@ -1,4 +1,4 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 export type InvoicePdfInvoice = {
   invoiceNumber: string | null;
@@ -310,7 +310,17 @@ const invoicePdfStyles = StyleSheet.create({
     color: "#52525b",
   },
   totalSection: {
-    alignItems: "flex-end",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  qrPaymentBlock: {
+    width: 126,
+  },
+  qrPaymentImage: {
+    width: 123,
+    height: 123,
+    marginTop: 2,
   },
   totalBlock: {
     width: 190,
@@ -355,9 +365,11 @@ const invoicePdfStyles = StyleSheet.create({
 export function InvoicePdfDocument({
   invoice,
   items,
+  qrPaymentDataUrl,
 }: {
   invoice: InvoicePdfInvoice;
   items: InvoicePdfItem[];
+  qrPaymentDataUrl?: string | null;
 }) {
   const supplierLines = buildPartyLines({
     name: invoice.supplierCompanyName,
@@ -705,6 +717,18 @@ export function InvoicePdfDocument({
         )}
 
         <View style={invoicePdfStyles.totalSection}>
+          {qrPaymentDataUrl ? (
+            <View style={invoicePdfStyles.qrPaymentBlock}>
+              <Text style={invoicePdfStyles.sectionTitle}>QR platba</Text>
+              <Image
+                src={qrPaymentDataUrl}
+                style={invoicePdfStyles.qrPaymentImage}
+              />
+            </View>
+          ) : (
+            <View />
+          )}
+
           <View style={invoicePdfStyles.totalBlock}>
             {totals.map((field) => (
               <View key={field.label} style={invoicePdfStyles.totalsRow}>
