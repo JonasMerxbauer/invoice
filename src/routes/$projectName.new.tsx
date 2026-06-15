@@ -81,6 +81,28 @@ interface LineItem {
   vatRate: string;
 }
 
+interface InvoiceCustomerOption {
+  id: string;
+  projectId: string;
+  name: string;
+  companyName: string | null;
+  ico: string | null;
+  dic: string | null;
+  street: string | null;
+  city: string | null;
+  postalCode: string | null;
+  country: string | null;
+}
+
+interface BankPaymentMethodOption {
+  id: string;
+  projectId: string;
+  name: string;
+  bankAccount: string | null;
+  iban: string | null;
+  swift: string | null;
+}
+
 function emptyLineItem(key: number): LineItem {
   return {
     key,
@@ -128,9 +150,9 @@ function NewCustomerDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
+  onCreated: (customer: InvoiceCustomerOption) => void;
   projectId: string;
-  customers: Array<{ id: string; ico: string | null }>;
+  customers: InvoiceCustomerOption[];
 }) {
   const { insert } = useEvolu();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -186,7 +208,18 @@ function NewCustomerDialog({
         return;
       }
 
-      onCreated(result.value.id);
+      onCreated({
+        id: result.value.id,
+        projectId,
+        name: parsedName.value,
+        companyName: value.companyName.trim() || null,
+        ico: value.ico.trim() || null,
+        dic: value.dic.trim() || null,
+        street: value.street.trim() || null,
+        city: value.city.trim() || null,
+        postalCode: value.postalCode.trim() || null,
+        country: value.country.trim() || null,
+      });
       customerForm.reset();
       setHasAttemptedSave(false);
       setSaveError(null);
@@ -225,7 +258,7 @@ function NewCustomerDialog({
     );
 
     if (existingCustomer) {
-      onCreated(existingCustomer.id);
+      onCreated(existingCustomer);
       customerForm.reset();
       setHasAttemptedSave(false);
       setSaveError(null);
@@ -372,7 +405,7 @@ function NewCustomerDialog({
               error={
                 customerFieldInvalid("postalCode")
                   ? customerErrors.get("postalCode")
-                : undefined
+                  : undefined
               }
             />
             <TextField
@@ -780,7 +813,7 @@ function NewBankAccountDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (id: string) => void;
+  onCreated: (method: BankPaymentMethodOption) => void;
   projectId: string;
 }) {
   const { insert } = useEvolu();
@@ -826,7 +859,14 @@ function NewBankAccountDialog({
         return;
       }
 
-      onCreated(result.value.id);
+      onCreated({
+        id: result.value.id,
+        projectId,
+        name: parsedName.value,
+        bankAccount: parsedBankAccount.value,
+        iban: value.iban.trim().toUpperCase() || null,
+        swift: value.swift.trim().toUpperCase() || null,
+      });
       bankAccountForm.reset();
       setHasAttemptedSave(false);
       setSaveError(null);
@@ -1259,27 +1299,90 @@ function NewInvoiceContent() {
     allInvoices,
     allPaymentMethods,
   ]);
+  const [createdCustomers, setCreatedCustomers] = useState<
+    InvoiceCustomerOption[]
+  >([]);
+  const [createdBankPaymentMethods, setCreatedBankPaymentMethods] = useState<
+    BankPaymentMethodOption[]
+  >([]);
 
   const project = useMemo(
     () => projects.find((p) => p.name === decodedName),
     [projects, decodedName],
   );
 
-  const projectCustomers = useMemo(
-    () => (project ? customers.filter((c) => c.projectId === project.id) : []),
+  const queriedProjectCustomers = useMemo(
+    () =>
+      project
+        ? customers
+            .filter((customer) => customer.projectId === project.id)
+            .map(
+              (customer): InvoiceCustomerOption => ({
+                id: customer.id,
+                projectId: customer.projectId!,
+                name: customer.name ?? "",
+                companyName: customer.companyName,
+                ico: customer.ico,
+                dic: customer.dic,
+                street: customer.street,
+                city: customer.city,
+                postalCode: customer.postalCode,
+                country: customer.country,
+              }),
+            )
+        : [],
     [customers, project],
   );
 
-  const bankPaymentMethods = useMemo(
+  const projectCustomers = useMemo(
+    () => [
+      ...queriedProjectCustomers,
+      ...createdCustomers.filter(
+        (customer) =>
+          customer.projectId === project?.id &&
+          !queriedProjectCustomers.some(
+            (queriedCustomer) => queriedCustomer.id === customer.id,
+          ),
+      ),
+    ],
+    [createdCustomers, project?.id, queriedProjectCustomers],
+  );
+
+  const queriedBankPaymentMethods = useMemo(
     () =>
       project
-        ? paymentMethods.filter(
-            (method) =>
-              method.projectId === project.id &&
-              method.type === "bank-transfer",
-          )
+        ? paymentMethods
+            .filter(
+              (method) =>
+                method.projectId === project.id &&
+                method.type === "bank-transfer",
+            )
+            .map(
+              (method): BankPaymentMethodOption => ({
+                id: method.id,
+                projectId: method.projectId!,
+                name: method.name ?? "",
+                bankAccount: method.bankAccount,
+                iban: method.iban,
+                swift: method.swift,
+              }),
+            )
         : [],
     [paymentMethods, project],
+  );
+
+  const bankPaymentMethods = useMemo(
+    () => [
+      ...queriedBankPaymentMethods,
+      ...createdBankPaymentMethods.filter(
+        (method) =>
+          method.projectId === project?.id &&
+          !queriedBankPaymentMethods.some(
+            (queriedMethod) => queriedMethod.id === method.id,
+          ),
+      ),
+    ],
+    [createdBankPaymentMethods, queriedBankPaymentMethods],
   );
 
   const projectDefaultBankOption = useMemo(() => {
@@ -1685,14 +1788,32 @@ function NewInvoiceContent() {
       <NewCustomerDialog
         open={customerDialogOpen}
         onClose={() => setCustomerDialogOpen(false)}
-        onCreated={(id) => form.setFieldValue("customerId", id)}
+        onCreated={(customer) => {
+          setCreatedCustomers((currentCustomers) =>
+            currentCustomers.some(
+              (currentCustomer) => currentCustomer.id === customer.id,
+            )
+              ? currentCustomers
+              : [...currentCustomers, customer],
+          );
+          form.setFieldValue("customerId", customer.id);
+        }}
         projectId={project.id}
         customers={projectCustomers}
       />
       <NewBankAccountDialog
         open={bankAccountDialogOpen}
         onClose={() => setBankAccountDialogOpen(false)}
-        onCreated={(id) => form.setFieldValue("bankPaymentMethodId", id)}
+        onCreated={(method) => {
+          setCreatedBankPaymentMethods((currentMethods) =>
+            currentMethods.some(
+              (currentMethod) => currentMethod.id === method.id,
+            )
+              ? currentMethods
+              : [...currentMethods, method],
+          );
+          form.setFieldValue("bankPaymentMethodId", method.id);
+        }}
         projectId={project.id}
       />
 
@@ -1809,9 +1930,12 @@ function NewInvoiceContent() {
               </Label>
               <Select
                 value={formValues.customerId}
-                onValueChange={(value) =>
-                  form.setFieldValue("customerId", value)
-                }
+                disabled={projectCustomers.length === 0}
+                onValueChange={(value) => {
+                  if (!value) return;
+
+                  form.setFieldValue("customerId", value);
+                }}
               >
                 <SelectTrigger
                   className="w-full"
@@ -1819,7 +1943,13 @@ function NewInvoiceContent() {
                     hasAttemptedSave && saveValidation.customerMissing
                   }
                 >
-                  <SelectValue placeholder="-- Zvolte odběratele --" />
+                  <SelectValue
+                    placeholder={
+                      projectCustomers.length === 0
+                        ? "Nejprve přidejte odběratele"
+                        : "-- Zvolte odběratele --"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {projectCustomers.map((c) => (
@@ -1942,6 +2072,7 @@ function NewInvoiceContent() {
                 >
                   <Select
                     value={formValues.bankPaymentMethodId}
+                    disabled={selectableBankPaymentMethods.length === 0}
                     onValueChange={(value) =>
                       form.setFieldValue("bankPaymentMethodId", value)
                     }
@@ -1953,7 +2084,13 @@ function NewInvoiceContent() {
                         saveValidation.bankPaymentMethodInvalid
                       }
                     >
-                      <SelectValue placeholder="Vyberte bankovní účet" />
+                      <SelectValue
+                        placeholder={
+                          selectableBankPaymentMethods.length === 0
+                            ? "Nejprve přidejte bankovní účet"
+                            : "Vyberte bankovní účet"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {selectableBankPaymentMethods.map((method) => (
