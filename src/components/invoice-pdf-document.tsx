@@ -532,7 +532,7 @@ export function InvoicePdfDocument({
             {supplierLines.length > 0 ? (
               supplierLines.map((line, index) => (
                 <Text
-                  key={`supplier-${index}`}
+                  key={`supplier-${line}`}
                   style={[
                     index === 0
                       ? invoicePdfStyles.partyPrimary
@@ -555,7 +555,7 @@ export function InvoicePdfDocument({
             {customerLines.length > 0 ? (
               customerLines.map((line, index) => (
                 <Text
-                  key={`customer-${index}`}
+                  key={`customer-${line}`}
                   style={[
                     index === 0
                       ? invoicePdfStyles.partyPrimary
@@ -594,9 +594,9 @@ export function InvoicePdfDocument({
                 </View>
               ))
             ) : paymentLines.length > 0 ? (
-              paymentLines.map((line, index) => (
+              paymentLines.map((line) => (
                 <Text
-                  key={`payment-${index}`}
+                  key={`payment-${line}`}
                   style={[
                     invoicePdfStyles.mutedText,
                     invoicePdfStyles.partyLine,
