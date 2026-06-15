@@ -376,6 +376,7 @@ function InvoiceDetailContent() {
   const canRecordPayment =
     persistedStatus !== "paid" && persistedStatus !== "cancelled";
   const canCancelInvoice = persistedStatus !== "cancelled";
+  const invoicePdfFileName = `${invoice.invoiceNumber ?? invoice.id}.pdf`;
 
   const supplierCompanyName = invoice.supplierCompanyName;
   const supplierIco = invoice.supplierIco;
@@ -455,7 +456,10 @@ function InvoiceDetailContent() {
         items: items as any,
       });
 
-      const objectUrl = URL.createObjectURL(blob);
+      const pdfFile = new File([blob], invoicePdfFileName, {
+        type: blob.type || "application/pdf",
+      });
+      const objectUrl = URL.createObjectURL(pdfFile);
       setDetailState({ pdfPreviewUrl: objectUrl });
     } catch (error) {
       console.error("Invoice PDF export failed", error);
@@ -861,16 +865,31 @@ function InvoiceDetailContent() {
         onOpenChange={handlePdfPreviewOpenChange}
       >
         <DialogContent
-          className="h-[90vh] w-[calc(100vw-2rem)] overflow-visible p-0 sm:max-w-5xl"
+          className="overflow-visible p-0"
+          style={{
+            aspectRatio: "210 / 297",
+          }}
           showCloseButton={false}
         >
           <DialogHeader className="sr-only">
             <DialogTitle>Náhled PDF faktury</DialogTitle>
           </DialogHeader>
+          {pdfPreviewUrl && (
+            <Button
+              asChild
+              type="button"
+              className="absolute right-3 top-3 z-20 shadow-lg"
+            >
+              <a href={pdfPreviewUrl} download={invoicePdfFileName}>
+                <Download className="size-4" />
+                Stáhnout PDF
+              </a>
+            </Button>
+          )}
           <DialogClose asChild>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="icon-sm"
               className="absolute -right-10 -top-10 z-20 rounded-full shadow-lg"
             >
@@ -881,9 +900,8 @@ function InvoiceDetailContent() {
           {pdfPreviewUrl && (
             <div className="h-full overflow-hidden rounded-lg">
               <iframe
-                src={`${pdfPreviewUrl}#navpanes=0`}
+                src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&view=FitH`}
                 title="Náhled PDF faktury"
-                sandbox="allow-downloads allow-scripts"
                 className="h-full w-full bg-muted"
               />
             </div>
