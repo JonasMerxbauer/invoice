@@ -1,8 +1,15 @@
 import * as Evolu from "@evolu/common";
 import { useQuery } from "@evolu/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pencil, Plus, FileText, Building2, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Pencil,
+  Plus,
+  FileText,
+  Building2,
+  Trash2,
+  Settings,
+} from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
 import { Button } from "~/components/ui/button";
 import {
@@ -32,6 +39,11 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
 import { evolu, useEvolu } from "~/evolu";
+import {
+  defaultSyncUrl,
+  getStoredSyncUrl,
+  syncUrlStorageKey,
+} from "~/evolu/settings";
 import type { CompanyLookupResult } from "~/lib/company-registry";
 
 const allProjects = evolu.createQuery((db) =>
@@ -542,6 +554,252 @@ function ProjectDialog({
   );
 }
 
+function AppSettingsDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const evolu = useEvolu();
+  const [syncUrl, setSyncUrl] = useState(() => getStoredSyncUrl());
+  const [mnemonic, setMnemonic] = useState("");
+  const [restoreMnemonic, setRestoreMnemonic] = useState("");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle",
+  );
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeletingLocalData, setIsDeletingLocalData] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    setSyncUrl(getStoredSyncUrl());
+    setStatusMessage(null);
+    setErrorMessage(null);
+    setCopyState("idle");
+
+    evolu.appOwner.then((owner) => {
+      if (!cancelled) setMnemonic(owner.mnemonic ?? "");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [evolu, open]);
+
+  const handleSyncUrlSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    const trimmedUrl = syncUrl.trim() || defaultSyncUrl;
+    if (!trimmedUrl.startsWith("wss://") && !trimmedUrl.startsWith("ws://")) {
+      setErrorMessage("Adresa synchronizace musí začínat ws:// nebo wss://.");
+      return;
+    }
+
+    localStorage.setItem(syncUrlStorageKey, trimmedUrl);
+    setStatusMessage("Adresa synchronizace je uložená. Aplikace se obnoví.");
+    window.location.reload();
+  };
+
+  const handleCopyMnemonic = async () => {
+    if (!mnemonic) return;
+
+    try {
+      await navigator.clipboard.writeText(mnemonic);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  };
+
+  const handleRestore = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    const trimmedMnemonic = restoreMnemonic.trim();
+    if (!trimmedMnemonic) {
+      setErrorMessage("Vložte obnovovací frázi.");
+      return;
+    }
+
+    setIsRestoring(true);
+    try {
+      const parsedMnemonic = Evolu.Mnemonic.orThrow(trimmedMnemonic);
+      await evolu.restoreAppOwner(parsedMnemonic, { reload: false });
+      localStorage.setItem(
+        "invoice:evolu-recovery-onboarding-complete",
+        "true",
+      );
+      setStatusMessage("Obnoveno. Aplikace se obnoví a začne synchronizovat.");
+      window.location.reload();
+    } catch {
+      setErrorMessage("Frázi se nepodařilo obnovit. Zkontrolujte ji a zkuste to znovu.");
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleDeleteLocalData = async () => {
+    const confirmed = window.confirm(
+      "Opravdu chcete smazat lokální data v tomto prohlížeči? Pokračujte jen pokud máte uloženou obnovovací frázi.",
+    );
+
+    if (!confirmed) return;
+
+    setIsDeletingLocalData(true);
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    try {
+      localStorage.removeItem("invoice:evolu-recovery-onboarding-complete");
+      await evolu.resetAppOwner({ reload: false });
+      setStatusMessage("Lokální data byla smazána. Aplikace se obnoví.");
+      window.location.reload();
+    } catch {
+      setErrorMessage("Lokální data se nepodařilo smazat.");
+      setIsDeletingLocalData(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-xl">
+            Nastavení synchronizace
+          </DialogTitle>
+          <DialogDescription>
+            Nastavte Evolu relay, obnovovací frázi a lokální data tohoto
+            prohlížeče.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {(statusMessage || errorMessage) && (
+            <div
+              className={
+                errorMessage
+                  ? "rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                  : "rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary"
+              }
+            >
+              {errorMessage ?? statusMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSyncUrlSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <h3 className="font-serif text-base font-semibold">
+                Synchronizační adresa
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Výchozí adresa je veřejný Evolu relay. Změna se projeví po
+                obnovení aplikace.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="sync-url">Relay URL</Label>
+              <Input
+                id="sync-url"
+                value={syncUrl}
+                onChange={(event) => setSyncUrl(event.target.value)}
+                placeholder={defaultSyncUrl}
+                className="font-mono"
+              />
+            </div>
+            <Button type="submit" className="gap-2">
+              Uložit synchronizaci
+            </Button>
+          </form>
+
+          <Separator />
+
+          <section className="space-y-3">
+            <div className="space-y-1">
+              <h3 className="font-serif text-base font-semibold">
+                Obnovovací fráze
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Fráze umožňuje obnovit a dešifrovat faktury na jiném počítači.
+                Neukazujte ji nikomu cizímu.
+              </p>
+            </div>
+            <Textarea
+              value={mnemonic || "Načítám obnovovací frázi..."}
+              readOnly
+              className="min-h-24 resize-none font-mono text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCopyMnemonic}
+              disabled={!mnemonic}
+            >
+              {copyState === "copied"
+                ? "Zkopírováno"
+                : copyState === "failed"
+                  ? "Zkopírujte ručně"
+                  : "Kopírovat frázi"}
+            </Button>
+          </section>
+
+          <Separator />
+
+          <form onSubmit={handleRestore} className="space-y-3">
+            <div className="space-y-1">
+              <h3 className="font-serif text-base font-semibold">
+                Obnovit z fráze
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Vložením fráze nahradíte aktuální lokální profil obnoveným
+                profilem.
+              </p>
+            </div>
+            <Textarea
+              value={restoreMnemonic}
+              onChange={(event) => setRestoreMnemonic(event.target.value)}
+              placeholder="Vložte obnovovací frázi"
+              className="min-h-20 resize-none font-mono text-sm"
+            />
+            <Button type="submit" disabled={isRestoring}>
+              {isRestoring ? "Obnovuji..." : "Obnovit a synchronizovat"}
+            </Button>
+          </form>
+
+          <Separator />
+
+          <section className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <div className="space-y-1">
+              <h3 className="font-serif text-base font-semibold text-destructive">
+                Smazat lokální data
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Smaže data jen v tomto prohlížeči. Data v relay zůstanou
+                obnovitelná pouze s obnovovací frází.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteLocalData}
+              disabled={isDeletingLocalData}
+            >
+              {isDeletingLocalData ? "Mažu..." : "Smazat lokální data"}
+            </Button>
+          </section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProjectInput({
   label,
   value,
@@ -611,6 +869,7 @@ function ProjectSelect({
 function AppContent() {
   const projects = useQuery(allProjects);
   const [createOpen, setCreateOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   const editingProject = useMemo(
@@ -637,6 +896,7 @@ function AppContent() {
           project={editingProject}
         />
       ) : null}
+      <AppSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       <div className="min-h-screen bg-background">
         <header className="border-b border-border/50">
@@ -652,12 +912,23 @@ function AppContent() {
                 </p>
               </div>
 
-              {projects.length > 0 ? (
-                <Button onClick={() => setCreateOpen(true)} className="gap-2">
-                  <Plus className="size-4" />
-                  Přidat projekt
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSettingsOpen(true)}
+                  aria-label="Nastavení synchronizace"
+                >
+                  <Settings className="size-4" />
                 </Button>
-              ) : null}
+                {projects.length > 0 ? (
+                  <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                    <Plus className="size-4" />
+                    Přidat projekt
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>
