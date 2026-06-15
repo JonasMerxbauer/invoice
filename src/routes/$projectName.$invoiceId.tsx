@@ -33,11 +33,21 @@ import {
   FileText,
   X,
 } from "lucide-react";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 export const Route = createFileRoute("/$projectName/$invoiceId")({
   component: InvoiceDetailComponent,
 });
+
+const subscribeToHydration = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerHydratedSnapshot = () => false;
 
 const allInvoices = evolu.createQuery((db) =>
   db.selectFrom("invoice").selectAll().where("isDeleted", "is", null),
@@ -250,17 +260,17 @@ function InvoiceDetailSkeleton() {
 function InvoiceDetailContent() {
   const { projectName, invoiceId } = Route.useParams();
   const { update } = useEvolu();
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydratedSnapshot,
+  );
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
   const [actionError, setActionError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
 
   useEffect(() => {
     return () => {
