@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -30,6 +31,7 @@ import {
   CreditCard,
   Download,
   FileText,
+  X,
 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
@@ -158,17 +160,6 @@ const vatModeLabel = (mode: string | null) => {
   }
 };
 
-function sanitizeFilenamePart(value: string): string {
-  const normalized = value
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "");
-
-  return normalized || "invoice";
-}
-
 function DetailField({
   label,
   value,
@@ -265,10 +256,17 @@ function InvoiceDetailContent() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setHasHydrated(true);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    };
+  }, [pdfPreviewUrl]);
 
   const [invoices, invoiceItems, projects, paymentMethods] = useQueries([
     allInvoices,
@@ -422,13 +420,7 @@ function InvoiceDetailContent() {
       });
 
       const objectUrl = URL.createObjectURL(blob);
-      const anchor = window.document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = `${sanitizeFilenamePart(projectName)}-${sanitizeFilenamePart(invoiceId)}.pdf`;
-      window.document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      setPdfPreviewUrl(objectUrl);
     } catch (error) {
       console.error("Invoice PDF export failed", error);
       const message =
@@ -439,6 +431,10 @@ function InvoiceDetailContent() {
     } finally {
       setIsExportingPdf(false);
     }
+  };
+
+  const handlePdfPreviewOpenChange = (open: boolean) => {
+    if (!open) setPdfPreviewUrl(null);
   };
 
   return (
@@ -820,6 +816,40 @@ function InvoiceDetailContent() {
           </>
         )}
       </div>
+
+      <Dialog
+        open={pdfPreviewUrl != null}
+        onOpenChange={handlePdfPreviewOpenChange}
+      >
+        <DialogContent
+          className="h-[90vh] w-[calc(100vw-2rem)] overflow-visible p-0 sm:max-w-5xl"
+          showCloseButton={false}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Náhled PDF faktury</DialogTitle>
+          </DialogHeader>
+          <DialogClose asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="absolute -right-10 -top-10 z-20 rounded-full shadow-lg"
+            >
+              <X className="size-4" />
+              <span className="sr-only">Zavřít náhled PDF</span>
+            </Button>
+          </DialogClose>
+          {pdfPreviewUrl && (
+            <div className="h-full overflow-hidden rounded-lg">
+              <iframe
+                src={`${pdfPreviewUrl}#navpanes=0`}
+                title="Náhled PDF faktury"
+                className="h-full w-full bg-muted"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-md">
