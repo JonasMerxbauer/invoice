@@ -2,7 +2,7 @@ import * as Evolu from "@evolu/common";
 import { useQuery } from "@evolu/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Pencil, Plus, FileText, Building2, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
 import { Button } from "~/components/ui/button";
 import {
@@ -166,12 +166,6 @@ function ProjectDialog({
     getProjectFormValues(project),
   );
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setValues(getProjectFormValues(project));
-    setSaveError(null);
-  }, [open, project]);
 
   const isEditing = mode === "edit";
 
@@ -626,19 +620,23 @@ function AppContent() {
 
   return (
     <>
-      <ProjectDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        mode="create"
-      />
-      <ProjectDialog
-        open={Boolean(editingProjectId && editingProject)}
-        onOpenChange={(open) => {
-          if (!open) setEditingProjectId(null);
-        }}
-        mode="edit"
-        project={editingProject}
-      />
+      {createOpen ? (
+        <ProjectDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          mode="create"
+        />
+      ) : null}
+      {editingProjectId && editingProject ? (
+        <ProjectDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingProjectId(null);
+          }}
+          mode="edit"
+          project={editingProject}
+        />
+      ) : null}
 
       <div className="min-h-screen bg-background">
         <header className="border-b border-border/50">

@@ -11,6 +11,11 @@ import { lookupCompanyRegistry } from "~/lib/company-registry-functions";
 
 const lookupCache = new Map<string, CompanyLookupResult[]>();
 
+type LookupState = {
+  cacheKey: string;
+  results: CompanyLookupResult[];
+};
+
 export function CompanyRegistryLookupInput({
   label,
   value,
@@ -34,41 +39,38 @@ export function CompanyRegistryLookupInput({
 }) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
   const lookup = useServerFn(lookupCompanyRegistry);
-  const [results, setResults] = useState<CompanyLookupResult[]>([]);
-  const [open, setOpen] = useState(false);
+  const [lookupState, setLookupState] = useState<LookupState | null>(null);
   const [focused, setFocused] = useState(false);
+  const classified = classifyCompanyLookupQuery(value);
+  const lookupMode = classified?.mode;
+  const lookupQuery = classified?.query;
+  const cacheKey =
+    lookupMode && lookupQuery
+      ? `${lookupMode}:${lookupQuery.toLocaleLowerCase("cs-CZ")}`
+      : null;
+  const cachedResults = cacheKey ? lookupCache.get(cacheKey) : undefined;
+  const results =
+    cachedResults ??
+    (lookupState?.cacheKey === cacheKey ? lookupState.results : []);
+  const open = focused && results.length > 0;
 
   useEffect(() => {
-    const classified = classifyCompanyLookupQuery(value);
-
-    if (!classified) {
-      setResults([]);
-      setOpen(false);
-      return;
-    }
-
-    const cacheKey = `${classified.mode}:${classified.query.toLocaleLowerCase("cs-CZ")}`;
-    const cached = lookupCache.get(cacheKey);
-    if (cached) {
-      setResults(cached);
-      setOpen(focused && cached.length > 0);
+    if (!lookupMode || !lookupQuery || !cacheKey || cachedResults) {
       return;
     }
 
     let cancelled = false;
     const timeout = window.setTimeout(() => {
-      void lookup({ data: classified })
+      void lookup({ data: { mode: lookupMode, query: lookupQuery } })
         .then((nextResults) => {
           if (cancelled) return;
           lookupCache.set(cacheKey, nextResults);
-          setResults(nextResults);
-          setOpen(focused && nextResults.length > 0);
+          setLookupState({ cacheKey, results: nextResults });
         })
         .catch(() => {
           if (cancelled) return;
           lookupCache.set(cacheKey, []);
-          setResults([]);
-          setOpen(false);
+          setLookupState({ cacheKey, results: [] });
         });
     }, 300);
 
@@ -76,7 +78,7 @@ export function CompanyRegistryLookupInput({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [focused, lookup, value]);
+  }, [cacheKey, cachedResults, lookup, lookupMode, lookupQuery]);
 
   return (
     <div className={cn("grid gap-2", wrapperClassName)}>
@@ -94,11 +96,9 @@ export function CompanyRegistryLookupInput({
           aria-invalid={Boolean(error)}
           onFocus={() => {
             setFocused(true);
-            setOpen(results.length > 0);
           }}
           onBlur={() => {
             setFocused(false);
-            setOpen(false);
           }}
         />
         {open && results.length > 0 ? (
@@ -111,7 +111,7 @@ export function CompanyRegistryLookupInput({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   onSelect(result);
-                  setOpen(false);
+                  setFocused(false);
                 }}
               >
                 <div className="min-w-0 space-y-1 py-0.5">

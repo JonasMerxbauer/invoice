@@ -215,14 +215,16 @@ function ProjectInvoicesContent() {
 
   return (
     <div>
-      <ProjectSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        project={project}
-        customers={customers}
-        paymentMethods={paymentMethods}
-        onProjectRenamed={handleProjectRenamed}
-      />
+      {settingsOpen ? (
+        <ProjectSettingsDialog
+          open
+          onOpenChange={setSettingsOpen}
+          project={project}
+          customers={customers}
+          paymentMethods={paymentMethods}
+          onProjectRenamed={handleProjectRenamed}
+        />
+      ) : null}
 
       {/* Project header */}
       <div className="flex items-start justify-between gap-4 mb-8">

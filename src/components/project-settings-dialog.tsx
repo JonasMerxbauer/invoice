@@ -1,5 +1,5 @@
 import * as Evolu from "@evolu/common";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { CompanyLookupResult } from "~/lib/company-registry";
 import { useEvolu } from "~/evolu";
 import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
@@ -288,17 +288,6 @@ export function ProjectSettingsDialog({
   const [bankAccountValues, setBankAccountValues] =
     useState<BankAccountFormValues>(getBankAccountFormValues());
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setActiveTab("general");
-    setProjectValues(getProjectFormValues(project));
-    setEditingCustomerId(null);
-    setCustomerValues(getCustomerFormValues());
-    setEditingBankAccountId(null);
-    setBankAccountValues(getBankAccountFormValues());
-    setSaveError(null);
-  }, [open, project]);
 
   const projectCustomers = customers.filter(
     (customer) => customer.projectId === project.id,
