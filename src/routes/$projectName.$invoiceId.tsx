@@ -37,7 +37,7 @@ import {
   Suspense,
   useEffect,
   useMemo,
-  useState,
+  useReducer,
   useSyncExternalStore,
 } from "react";
 
@@ -257,6 +257,22 @@ function InvoiceDetailSkeleton() {
   );
 }
 
+type InvoiceDetailState = {
+  paymentDialogOpen: boolean;
+  paymentDate: Date | undefined;
+  actionError: string | null;
+  exportError: string | null;
+  isExportingPdf: boolean;
+  pdfPreviewUrl: string | null;
+};
+
+function invoiceDetailReducer(
+  state: InvoiceDetailState,
+  patch: Partial<InvoiceDetailState>,
+) {
+  return { ...state, ...patch };
+}
+
 function InvoiceDetailContent() {
   const { projectName, invoiceId } = Route.useParams();
   const { update } = useEvolu();
@@ -265,12 +281,22 @@ function InvoiceDetailContent() {
     getHydratedSnapshot,
     getServerHydratedSnapshot,
   );
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [detailState, setDetailState] = useReducer(invoiceDetailReducer, {
+    paymentDialogOpen: false,
+    paymentDate: new Date(),
+    actionError: null,
+    exportError: null,
+    isExportingPdf: false,
+    pdfPreviewUrl: null,
+  });
+  const {
+    paymentDialogOpen,
+    paymentDate,
+    actionError,
+    exportError,
+    isExportingPdf,
+    pdfPreviewUrl,
+  } = detailState;
 
   useEffect(() => {
     return () => {
@@ -377,16 +403,18 @@ function InvoiceDetailContent() {
   const customerPostalCode = invoice.customerPostalCode;
 
   const openPaymentDialog = () => {
-    setActionError(null);
-    setPaymentDate(parseDateIso(invoice.paidDate) ?? new Date());
-    setPaymentDialogOpen(true);
+    setDetailState({
+      actionError: null,
+      paymentDate: parseDateIso(invoice.paidDate) ?? new Date(),
+      paymentDialogOpen: true,
+    });
   };
 
   const handleRecordPayment = () => {
     if (!invoice || !paymentDate) return;
     const paidDate = Evolu.dateToDateIso(paymentDate);
     if (!paidDate.ok) {
-      setActionError("Zadejte platné datum zaplacení.");
+      setDetailState({ actionError: "Zadejte platné datum zaplacení." });
       return;
     }
 
@@ -396,12 +424,11 @@ function InvoiceDetailContent() {
       paidDate: paidDate.value,
     } as any);
     if (!result.ok) {
-      setActionError("Platbu se nepodařilo uložit.");
+      setDetailState({ actionError: "Platbu se nepodařilo uložit." });
       return;
     }
 
-    setActionError(null);
-    setPaymentDialogOpen(false);
+    setDetailState({ actionError: null, paymentDialogOpen: false });
   };
 
   const handleCancelInvoice = () => {
@@ -411,17 +438,16 @@ function InvoiceDetailContent() {
       paidDate: null,
     } as any);
     if (!result.ok) {
-      setActionError("Fakturu se nepodařilo stornovat.");
+      setDetailState({ actionError: "Fakturu se nepodařilo stornovat." });
       return;
     }
 
-    setActionError(null);
+    setDetailState({ actionError: null });
   };
 
   const handleExportPdf = async () => {
     try {
-      setExportError(null);
-      setIsExportingPdf(true);
+      setDetailState({ exportError: null, isExportingPdf: true });
       const { generateInvoicePdfBlob } = await import("~/lib/invoice-pdf");
 
       const blob = await generateInvoicePdfBlob({
@@ -430,21 +456,21 @@ function InvoiceDetailContent() {
       });
 
       const objectUrl = URL.createObjectURL(blob);
-      setPdfPreviewUrl(objectUrl);
+      setDetailState({ pdfPreviewUrl: objectUrl });
     } catch (error) {
       console.error("Invoice PDF export failed", error);
       const message =
         error instanceof Error && error.message
           ? `PDF se nepodařilo vygenerovat. ${error.message}`
           : "PDF se nepodařilo vygenerovat.";
-      setExportError(message);
+      setDetailState({ exportError: message });
     } finally {
-      setIsExportingPdf(false);
+      setDetailState({ isExportingPdf: false });
     }
   };
 
   const handlePdfPreviewOpenChange = (open: boolean) => {
-    if (!open) setPdfPreviewUrl(null);
+    if (!open) setDetailState({ pdfPreviewUrl: null });
   };
 
   return (
@@ -865,7 +891,12 @@ function InvoiceDetailContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+      <Dialog
+        open={paymentDialogOpen}
+        onOpenChange={(paymentDialogOpen) =>
+          setDetailState({ paymentDialogOpen })
+        }
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-serif">Zaznamenat platbu</DialogTitle>
@@ -882,7 +913,7 @@ function InvoiceDetailContent() {
             )}
             <DatePicker
               value={paymentDate}
-              onChange={setPaymentDate}
+              onChange={(paymentDate) => setDetailState({ paymentDate })}
               placeholder="Vyberte datum zaplacení"
               className="w-full"
             />
@@ -892,7 +923,7 @@ function InvoiceDetailContent() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setPaymentDialogOpen(false)}
+              onClick={() => setDetailState({ paymentDialogOpen: false })}
             >
               Zrušit
             </Button>

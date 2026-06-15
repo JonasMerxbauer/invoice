@@ -40,6 +40,7 @@ import { z } from "zod";
 import { AlertCircle, Plus, Trash2, Save, UserPlus } from "lucide-react";
 import {
   useEffect,
+  useReducer,
   useState,
   useRef,
   useMemo,
@@ -102,6 +103,24 @@ interface BankPaymentMethodOption {
   bankAccount: string | null;
   iban: string | null;
   swift: string | null;
+}
+
+type NewInvoiceUiState = {
+  customerDialogOpen: boolean;
+  bankAccountDialogOpen: boolean;
+  nextKey: number;
+  saveError: string | null;
+  hasAttemptedSave: boolean;
+};
+
+function newInvoiceUiReducer(
+  state: NewInvoiceUiState,
+  action:
+    | Partial<NewInvoiceUiState>
+    | ((state: NewInvoiceUiState) => Partial<NewInvoiceUiState>),
+) {
+  const patch = typeof action === "function" ? action(state) : action;
+  return { ...state, ...patch };
 }
 
 function emptyLineItem(key: number): LineItem {
@@ -1301,9 +1320,23 @@ function NewInvoiceContent() {
     allPaymentMethods,
   ]);
   const createdCustomersRef = useRef<InvoiceCustomerOption[]>([]);
-  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const createdBankPaymentMethodsRef = useRef<BankPaymentMethodOption[]>([]);
-  const [bankAccountDialogOpen, setBankAccountDialogOpen] = useState(false);
+  const [uiState, setUiState] = useReducer(newInvoiceUiReducer, {
+    customerDialogOpen: false,
+    bankAccountDialogOpen: false,
+    nextKey: 2,
+    saveError: null,
+    hasAttemptedSave: false,
+  });
+  const {
+    customerDialogOpen,
+    bankAccountDialogOpen,
+    nextKey,
+    saveError,
+    hasAttemptedSave,
+  } = uiState;
+  const setSaveError = (saveError: string | null) =>
+    setUiState({ saveError });
   const createdCustomers = createdCustomersRef.current;
   const createdBankPaymentMethods = createdBankPaymentMethodsRef.current;
 
@@ -1644,9 +1677,6 @@ function NewInvoiceContent() {
   });
   const formValues = useStore(form.store, (state) => state.values);
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
-  const [nextKey, setNextKey] = useState(2);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
 
   useEffect(() => {
     if (applyVat) return;
@@ -1691,7 +1721,7 @@ function NewInvoiceContent() {
   // ── Line item operations ────────────────────────────────────────
   const addItem = useCallback(() => {
     form.pushFieldValue("items", emptyLineItem(nextKey));
-    setNextKey((k) => k + 1);
+    setUiState(({ nextKey }) => ({ nextKey: nextKey + 1 }));
   }, [form, nextKey]);
 
   const removeItem = useCallback(
@@ -1744,8 +1774,7 @@ function NewInvoiceContent() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    setHasAttemptedSave(true);
-    setSaveError(null);
+    setUiState({ hasAttemptedSave: true, saveError: null });
 
     if (!project) {
       setSaveError("Projekt nebyl nalezen.");
@@ -1784,7 +1813,7 @@ function NewInvoiceContent() {
     <form onSubmit={handleSubmit}>
       <NewCustomerDialog
         open={customerDialogOpen}
-        onClose={() => setCustomerDialogOpen(false)}
+        onClose={() => setUiState({ customerDialogOpen: false })}
         onCreated={(customer) => {
           if (
             !createdCustomersRef.current.some(
@@ -1803,7 +1832,7 @@ function NewInvoiceContent() {
       />
       <NewBankAccountDialog
         open={bankAccountDialogOpen}
-        onClose={() => setBankAccountDialogOpen(false)}
+        onClose={() => setUiState({ bankAccountDialogOpen: false })}
         onCreated={(method) => {
           if (
             !createdBankPaymentMethodsRef.current.some(
@@ -1971,7 +2000,7 @@ function NewInvoiceContent() {
             <Button
               variant="outline"
               type="button"
-              onClick={() => setCustomerDialogOpen(true)}
+              onClick={() => setUiState({ customerDialogOpen: true })}
               className="gap-1.5 shrink-0"
             >
               <UserPlus className="size-4" />
@@ -2108,7 +2137,7 @@ function NewInvoiceContent() {
                 <Button
                   variant="outline"
                   type="button"
-                  onClick={() => setBankAccountDialogOpen(true)}
+                  onClick={() => setUiState({ bankAccountDialogOpen: true })}
                   className="gap-1.5"
                 >
                   <Plus className="size-4" />

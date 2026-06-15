@@ -1,5 +1,5 @@
 import * as Evolu from "@evolu/common";
-import { useState, type FormEvent } from "react";
+import { useReducer, type FormEvent, type SetStateAction } from "react";
 import type { CompanyLookupResult } from "~/lib/company-registry";
 import { useEvolu } from "~/evolu";
 import { CompanyRegistryLookupInput } from "~/components/company-registry-lookup-input";
@@ -256,6 +256,32 @@ function SettingsSelect({
 
 type SettingsTab = "general" | "customers" | "bankAccounts";
 
+type ProjectSettingsState = {
+  activeTab: SettingsTab;
+  projectValues: ProjectFormValues;
+  editingCustomerId: string | null;
+  customerValues: CustomerFormValues;
+  editingBankAccountId: string | null;
+  bankAccountValues: BankAccountFormValues;
+  saveError: string | null;
+};
+
+function projectSettingsReducer(
+  state: ProjectSettingsState,
+  action:
+    | Partial<ProjectSettingsState>
+    | ((state: ProjectSettingsState) => Partial<ProjectSettingsState>),
+) {
+  const patch = typeof action === "function" ? action(state) : action;
+  return { ...state, ...patch };
+}
+
+function resolveSetStateAction<T>(current: T, action: SetStateAction<T>): T {
+  return typeof action === "function"
+    ? (action as (current: T) => T)(current)
+    : action;
+}
+
 export function ProjectSettingsDialog({
   open,
   onOpenChange,
@@ -272,22 +298,50 @@ export function ProjectSettingsDialog({
   onProjectRenamed: (name: string) => void;
 }) {
   const { update } = useEvolu();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [projectValues, setProjectValues] = useState<ProjectFormValues>(() =>
-    getProjectFormValues(project),
+  const [settingsState, setSettingsState] = useReducer(
+    projectSettingsReducer,
+    project,
+    (project): ProjectSettingsState => ({
+      activeTab: "general",
+      projectValues: getProjectFormValues(project),
+      editingCustomerId: null,
+      customerValues: getCustomerFormValues(),
+      editingBankAccountId: null,
+      bankAccountValues: getBankAccountFormValues(),
+      saveError: null,
+    }),
   );
-  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(
-    null,
-  );
-  const [customerValues, setCustomerValues] = useState<CustomerFormValues>(
-    getCustomerFormValues(),
-  );
-  const [editingBankAccountId, setEditingBankAccountId] = useState<
-    string | null
-  >(null);
-  const [bankAccountValues, setBankAccountValues] =
-    useState<BankAccountFormValues>(getBankAccountFormValues());
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const {
+    activeTab,
+    projectValues,
+    editingCustomerId,
+    customerValues,
+    editingBankAccountId,
+    bankAccountValues,
+    saveError,
+  } = settingsState;
+  const setActiveTab = (activeTab: SettingsTab) =>
+    setSettingsState({ activeTab });
+  const setProjectValues = (action: SetStateAction<ProjectFormValues>) =>
+    setSettingsState(({ projectValues }) => ({
+      projectValues: resolveSetStateAction(projectValues, action),
+    }));
+  const setEditingCustomerId = (editingCustomerId: string | null) =>
+    setSettingsState({ editingCustomerId });
+  const setCustomerValues = (action: SetStateAction<CustomerFormValues>) =>
+    setSettingsState(({ customerValues }) => ({
+      customerValues: resolveSetStateAction(customerValues, action),
+    }));
+  const setEditingBankAccountId = (editingBankAccountId: string | null) =>
+    setSettingsState({ editingBankAccountId });
+  const setBankAccountValues = (
+    action: SetStateAction<BankAccountFormValues>,
+  ) =>
+    setSettingsState(({ bankAccountValues }) => ({
+      bankAccountValues: resolveSetStateAction(bankAccountValues, action),
+    }));
+  const setSaveError = (saveError: string | null) =>
+    setSettingsState({ saveError });
 
   const projectCustomers = customers.filter(
     (customer) => customer.projectId === project.id,
