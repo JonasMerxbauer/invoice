@@ -1382,7 +1382,7 @@ function NewInvoiceContent() {
           ),
       ),
     ],
-    [createdBankPaymentMethods, queriedBankPaymentMethods],
+    [createdBankPaymentMethods, project?.id, queriedBankPaymentMethods],
   );
 
   const projectDefaultBankOption = useMemo(() => {
