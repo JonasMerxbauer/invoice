@@ -41,6 +41,7 @@ import { AlertCircle, Plus, Trash2, Save, UserPlus } from "lucide-react";
 import {
   useEffect,
   useState,
+  useRef,
   useMemo,
   useCallback,
   Suspense,
@@ -1299,12 +1300,12 @@ function NewInvoiceContent() {
     allInvoices,
     allPaymentMethods,
   ]);
-  const [createdCustomers, setCreatedCustomers] = useState<
-    InvoiceCustomerOption[]
-  >([]);
-  const [createdBankPaymentMethods, setCreatedBankPaymentMethods] = useState<
-    BankPaymentMethodOption[]
-  >([]);
+  const createdCustomersRef = useRef<InvoiceCustomerOption[]>([]);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const createdBankPaymentMethodsRef = useRef<BankPaymentMethodOption[]>([]);
+  const [bankAccountDialogOpen, setBankAccountDialogOpen] = useState(false);
+  const createdCustomers = createdCustomersRef.current;
+  const createdBankPaymentMethods = createdBankPaymentMethodsRef.current;
 
   const project = useMemo(
     () => projects.find((p) => p.name === decodedName),
@@ -1646,7 +1647,6 @@ function NewInvoiceContent() {
   const [nextKey, setNextKey] = useState(2);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
-  const [bankAccountDialogOpen, setBankAccountDialogOpen] = useState(false);
 
   useEffect(() => {
     if (applyVat) return;
@@ -1684,9 +1684,6 @@ function NewInvoiceContent() {
     formValues.customPaymentMethod,
     formValues.paymentMethod,
   ]);
-
-  // Customer dialog
-  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
   // Use generated invoice number if user hasn't typed one
   const effectiveInvoiceNumber = formValues.invoiceNumber || nextInvoiceNumber;
@@ -1789,13 +1786,16 @@ function NewInvoiceContent() {
         open={customerDialogOpen}
         onClose={() => setCustomerDialogOpen(false)}
         onCreated={(customer) => {
-          setCreatedCustomers((currentCustomers) =>
-            currentCustomers.some(
+          if (
+            !createdCustomersRef.current.some(
               (currentCustomer) => currentCustomer.id === customer.id,
             )
-              ? currentCustomers
-              : [...currentCustomers, customer],
-          );
+          ) {
+            createdCustomersRef.current = [
+              ...createdCustomersRef.current,
+              customer,
+            ];
+          }
           form.setFieldValue("customerId", customer.id);
         }}
         projectId={project.id}
@@ -1805,13 +1805,16 @@ function NewInvoiceContent() {
         open={bankAccountDialogOpen}
         onClose={() => setBankAccountDialogOpen(false)}
         onCreated={(method) => {
-          setCreatedBankPaymentMethods((currentMethods) =>
-            currentMethods.some(
+          if (
+            !createdBankPaymentMethodsRef.current.some(
               (currentMethod) => currentMethod.id === method.id,
             )
-              ? currentMethods
-              : [...currentMethods, method],
-          );
+          ) {
+            createdBankPaymentMethodsRef.current = [
+              ...createdBankPaymentMethodsRef.current,
+              method,
+            ];
+          }
           form.setFieldValue("bankPaymentMethodId", method.id);
         }}
         projectId={project.id}
