@@ -1,2 +1,8 @@
-minimumReleaseAge: 10080
-trustPolicy: no-downgrade
+packages:
+  - "."
+
+allowBuilds:
+  esbuild: false
+  msgpackr-extract: false
+
+minimumReleaseAge: 2880
