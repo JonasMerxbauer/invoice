@@ -45,6 +45,7 @@ import {
   syncUrlStorageKey,
 } from "~/evolu/settings";
 import type { CompanyLookupResult } from "~/lib/company-registry";
+import { cn } from "~/lib/utils";
 
 const allProjects = evolu.createQuery((db) =>
   db
@@ -564,6 +565,7 @@ function AppSettingsDialog({
   const evolu = useEvolu();
   const [syncUrl, setSyncUrl] = useState(() => getStoredSyncUrl());
   const [mnemonic, setMnemonic] = useState("");
+  const [isPhraseRevealed, setIsPhraseRevealed] = useState(false);
   const [restoreMnemonic, setRestoreMnemonic] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -581,6 +583,7 @@ function AppSettingsDialog({
     setStatusMessage(null);
     setErrorMessage(null);
     setCopyState("idle");
+    setIsPhraseRevealed(false);
 
     evolu.appOwner.then((owner) => {
       if (!cancelled) setMnemonic(owner.mnemonic ?? "");
@@ -640,7 +643,9 @@ function AppSettingsDialog({
       setStatusMessage("Obnoveno. Aplikace se obnoví a začne synchronizovat.");
       window.location.reload();
     } catch {
-      setErrorMessage("Frázi se nepodařilo obnovit. Zkontrolujte ji a zkuste to znovu.");
+      setErrorMessage(
+        "Frázi se nepodařilo obnovit. Zkontrolujte ji a zkuste to znovu.",
+      );
     } finally {
       setIsRestoring(false);
     }
@@ -731,11 +736,31 @@ function AppSettingsDialog({
                 Neukazujte ji nikomu cizímu.
               </p>
             </div>
-            <Textarea
-              value={mnemonic || "Načítám obnovovací frázi..."}
-              readOnly
-              className="min-h-24 resize-none font-mono text-sm"
-            />
+            <div className="relative overflow-hidden rounded-lg border bg-background/80">
+              <div
+                className={cn(
+                  "min-h-28 whitespace-pre-wrap p-4 font-mono text-sm leading-6 transition-[filter,opacity,transform] duration-[250ms] ease-out motion-reduce:transition-none",
+                  isPhraseRevealed
+                    ? "translate-y-0 opacity-100 blur-0"
+                    : "translate-y-1 opacity-80 blur-md select-none",
+                )}
+                aria-label="Obnovovací fráze"
+              >
+                {mnemonic || "Načítám obnovovací frázi..."}
+              </div>
+              {!isPhraseRevealed ? (
+                <div className="absolute inset-0 grid place-items-center bg-background/35 backdrop-blur-[2px] motion-reduce:backdrop-blur-none">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setIsPhraseRevealed(true)}
+                    disabled={!mnemonic}
+                  >
+                    Zobrazit frázi
+                  </Button>
+                </div>
+              ) : null}
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -1004,7 +1029,9 @@ function AppContent() {
 
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           {project.ico ? (
-                            <span className="font-mono">IČO: {project.ico}</span>
+                            <span className="font-mono">
+                              IČO: {project.ico}
+                            </span>
                           ) : null}
                           {project.city ? <span>{project.city}</span> : null}
                           {project.email ? (
