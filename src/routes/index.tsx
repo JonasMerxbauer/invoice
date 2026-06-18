@@ -929,7 +929,7 @@ function AppContent() {
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div className="flex items-baseline gap-4">
                 <h1 className="font-serif text-3xl font-bold tracking-tight">
-                  Fakturace
+                  Fakturovač
                 </h1>
                 <Separator orientation="vertical" className="h-6 self-center" />
                 <p className="font-serif text-sm italic text-muted-foreground">
