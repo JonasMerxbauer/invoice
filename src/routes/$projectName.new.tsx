@@ -1335,8 +1335,7 @@ function NewInvoiceContent() {
     saveError,
     hasAttemptedSave,
   } = uiState;
-  const setSaveError = (saveError: string | null) =>
-    setUiState({ saveError });
+  const setSaveError = (saveError: string | null) => setUiState({ saveError });
   const createdCustomers = createdCustomersRef.current;
   const createdBankPaymentMethods = createdBankPaymentMethodsRef.current;
 
@@ -2084,7 +2083,7 @@ function NewInvoiceContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Banka">Banka</SelectItem>
-                  <SelectItem value="Hotove">Hotove</SelectItem>
+                  <SelectItem value="Hotove">Hotově</SelectItem>
                   <SelectItem value="Jine">Jine</SelectItem>
                 </SelectContent>
               </Select>
