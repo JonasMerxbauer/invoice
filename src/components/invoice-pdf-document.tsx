@@ -541,7 +541,7 @@ export function InvoicePdfDocument({
         <Text style={invoicePdfStyles.detailLabel}>{field.label}</Text>
         <Text
           style={
-            field.mono
+            "mono" in field && field.mono
               ? [invoicePdfStyles.detailValue, invoicePdfStyles.mono]
               : invoicePdfStyles.detailValue
           }
