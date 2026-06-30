@@ -1,4 +1,11 @@
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import {
+  Document,
+  Image,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+} from "@react-pdf/renderer";
 
 export type InvoicePdfInvoice = {
   invoiceNumber: string | null;
@@ -8,6 +15,7 @@ export type InvoicePdfInvoice = {
   paidDate: string | null;
   currency: string | null;
   vatMode: string | null;
+  paymentMethodLabel?: string | null;
   variableSymbol: string | null;
   constantSymbol: string | null;
   specificSymbol: string | null;
@@ -234,9 +242,11 @@ const invoicePdfStyles = StyleSheet.create({
     fontStyle: "italic",
   },
   detailGrid: {
+    marginBottom: 26,
+  },
+  detailPair: {
     flexDirection: "row",
     gap: 44,
-    marginBottom: 26,
   },
   detailColumn: {
     flexGrow: 1,
@@ -247,6 +257,9 @@ const invoicePdfStyles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 16,
     marginBottom: 5,
+  },
+  detailSpacer: {
+    marginTop: 8,
   },
   detailLabel: {
     color: "#52525b",
@@ -287,8 +300,15 @@ const invoicePdfStyles = StyleSheet.create({
     flexGrow: 1,
     paddingRight: 12,
   },
+  colQuantity: {
+    width: 62,
+    paddingRight: 10,
+  },
+  colUnitPrice: {
+    width: 92,
+  },
   colTotal: {
-    width: 150,
+    width: 110,
   },
   tableHeaderText: {
     fontSize: 8,
@@ -318,8 +338,8 @@ const invoicePdfStyles = StyleSheet.create({
     width: 126,
   },
   qrPaymentImage: {
-    width: 123,
-    height: 123,
+    width: 100,
+    height: 100,
     marginTop: 2,
   },
   totalBlock: {
@@ -373,9 +393,6 @@ export function InvoicePdfDocument({
 }) {
   const supplierLines = buildPartyLines({
     name: invoice.supplierCompanyName,
-    ico: invoice.supplierIco,
-    dic: invoice.supplierDic,
-    vatId: invoice.supplierVatId,
     street: invoice.supplierStreet,
     postalCode: invoice.supplierPostalCode,
     city: invoice.supplierCity,
@@ -385,8 +402,6 @@ export function InvoicePdfDocument({
   const customerLines = buildPartyLines({
     name: invoice.customerName,
     companyName: invoice.customerCompanyName,
-    ico: invoice.customerIco,
-    dic: invoice.customerDic,
     street: invoice.customerStreet,
     postalCode: invoice.customerPostalCode,
     city: invoice.customerCity,
@@ -404,16 +419,46 @@ export function InvoicePdfDocument({
   const isVatPayer = invoice.vatMode !== "none";
   const vatModeValue = vatModeLabel(invoice.vatMode);
 
-  const leftDetails = [
+  const leftIntroDetails = [
     ...(invoice.supplierIco
       ? [{ label: "IČO", value: invoice.supplierIco, mono: true }]
       : []),
+    { label: "DPH", value: isVatPayer ? "Plátce DPH" : "Neplátce DPH" },
     ...(invoice.supplierVatId || invoice.supplierDic
       ? [
           {
             label: invoice.supplierVatId ? "VAT ID" : "DIČ",
             value: invoice.supplierVatId ?? invoice.supplierDic,
             mono: true,
+          },
+        ]
+      : []),
+  ];
+
+  const leftPaymentDetails = [
+    ...(invoice.supplierBankAccount
+      ? [
+          {
+            label: "Bankovní účet",
+            value: invoice.supplierBankAccount,
+            mono: true,
+          },
+        ]
+      : []),
+    ...(invoice.variableSymbol
+      ? [
+          {
+            label: "Variabilní symbol",
+            value: invoice.variableSymbol,
+            mono: true,
+          },
+        ]
+      : []),
+    ...(invoice.paymentMethodLabel
+      ? [
+          {
+            label: "Způsob platby",
+            value: invoice.paymentMethodLabel,
           },
         ]
       : []),
@@ -435,24 +480,6 @@ export function InvoicePdfDocument({
           },
         ]
       : []),
-    ...(invoice.supplierBankAccount
-      ? [
-          {
-            label: "Bankovní účet",
-            value: invoice.supplierBankAccount,
-            mono: true,
-          },
-        ]
-      : []),
-    ...(invoice.variableSymbol
-      ? [
-          {
-            label: "Variabilní symbol",
-            value: invoice.variableSymbol,
-            mono: true,
-          },
-        ]
-      : []),
     ...(invoice.supplierIban
       ? [{ label: "IBAN", value: invoice.supplierIban, mono: true }]
       : []),
@@ -461,10 +488,13 @@ export function InvoicePdfDocument({
       : []),
   ];
 
-  const rightDetails = [
+  const rightIntroDetails = [
     ...(invoice.customerIco
       ? [{ label: "IČO", value: invoice.customerIco, mono: true }]
       : []),
+  ];
+
+  const rightDateDetails = [
     ...(invoice.issueDate
       ? [{ label: "Datum vystavení", value: formatDate(invoice.issueDate) }]
       : []),
@@ -485,6 +515,42 @@ export function InvoicePdfDocument({
         : []
       : []),
   ];
+
+  const introRowCount = Math.max(
+    leftIntroDetails.length,
+    rightIntroDetails.length,
+  );
+  const detailRowCount = Math.max(
+    leftPaymentDetails.length,
+    rightDateDetails.length,
+  );
+
+  const renderDetailField = (
+    field:
+      | (typeof leftIntroDetails)[number]
+      | (typeof leftPaymentDetails)[number]
+      | (typeof rightIntroDetails)[number]
+      | (typeof rightDateDetails)[number]
+      | undefined,
+    key: string,
+  ) => {
+    if (!field) return <View key={key} style={invoicePdfStyles.detailRow} />;
+
+    return (
+      <View key={key} style={invoicePdfStyles.detailRow}>
+        <Text style={invoicePdfStyles.detailLabel}>{field.label}</Text>
+        <Text
+          style={
+            field.mono
+              ? [invoicePdfStyles.detailValue, invoicePdfStyles.mono]
+              : invoicePdfStyles.detailValue
+          }
+        >
+          {field.value}
+        </Text>
+      </View>
+    );
+  };
 
   const totals = [
     ...(isVatPayer
@@ -575,59 +641,54 @@ export function InvoicePdfDocument({
         </View>
 
         <View style={invoicePdfStyles.detailGrid}>
-          <View style={invoicePdfStyles.detailColumn}>
-            {leftDetails.length > 0 ? (
-              leftDetails.map((field) => (
-                <View key={field.label} style={invoicePdfStyles.detailRow}>
-                  <Text style={invoicePdfStyles.detailLabel}>
-                    {field.label}
-                  </Text>
-                  <Text
-                    style={
-                      field.mono
-                        ? [invoicePdfStyles.detailValue, invoicePdfStyles.mono]
-                        : invoicePdfStyles.detailValue
-                    }
-                  >
-                    {field.value}
-                  </Text>
-                </View>
-              ))
-            ) : paymentLines.length > 0 ? (
-              paymentLines.map((line) => (
-                <Text
-                  key={`payment-${line}`}
-                  style={[
-                    invoicePdfStyles.mutedText,
-                    invoicePdfStyles.partyLine,
-                  ]}
-                >
-                  {line}
-                </Text>
-              ))
-            ) : (
-              <Text style={invoicePdfStyles.emptyText}>
-                Žádné platební údaje
-              </Text>
-            )}
-          </View>
-
-          <View style={invoicePdfStyles.detailColumn}>
-            {rightDetails.map((field) => (
-              <View key={field.label} style={invoicePdfStyles.detailRow}>
-                <Text style={invoicePdfStyles.detailLabel}>{field.label}</Text>
-                <Text
-                  style={
-                    field.mono
-                      ? [invoicePdfStyles.detailValue, invoicePdfStyles.mono]
-                      : invoicePdfStyles.detailValue
-                  }
-                >
-                  {field.value}
-                </Text>
+          {Array.from({ length: introRowCount }).map((_, index) => (
+            <View key={`intro-${index}`} style={invoicePdfStyles.detailPair}>
+              <View style={invoicePdfStyles.detailColumn}>
+                {renderDetailField(
+                  leftIntroDetails[index],
+                  `left-intro-${index}`,
+                )}
               </View>
-            ))}
-          </View>
+              <View style={invoicePdfStyles.detailColumn}>
+                {renderDetailField(
+                  rightIntroDetails[index],
+                  `right-intro-${index}`,
+                )}
+              </View>
+            </View>
+          ))}
+
+          <View style={invoicePdfStyles.detailSpacer} />
+
+          {detailRowCount > 0 ? (
+            Array.from({ length: detailRowCount }).map((_, index) => (
+              <View key={`detail-${index}`} style={invoicePdfStyles.detailPair}>
+                <View style={invoicePdfStyles.detailColumn}>
+                  {renderDetailField(
+                    leftPaymentDetails[index],
+                    `left-detail-${index}`,
+                  )}
+                </View>
+                <View style={invoicePdfStyles.detailColumn}>
+                  {renderDetailField(
+                    rightDateDetails[index],
+                    `right-detail-${index}`,
+                  )}
+                </View>
+              </View>
+            ))
+          ) : paymentLines.length > 0 ? (
+            paymentLines.map((line) => (
+              <Text
+                key={`payment-${line}`}
+                style={[invoicePdfStyles.mutedText, invoicePdfStyles.partyLine]}
+              >
+                {line}
+              </Text>
+            ))
+          ) : (
+            <Text style={invoicePdfStyles.emptyText}>Žádné platební údaje</Text>
+          )}
         </View>
 
         {items.length === 0 ? (
@@ -640,11 +701,32 @@ export function InvoicePdfDocument({
               <View
                 style={[
                   invoicePdfStyles.tableCell,
+                  invoicePdfStyles.colQuantity,
+                ]}
+              >
+                <Text style={invoicePdfStyles.tableHeaderText}>Množství</Text>
+              </View>
+              <View
+                style={[
+                  invoicePdfStyles.tableCell,
                   invoicePdfStyles.colDescription,
                 ]}
               >
-                <Text style={invoicePdfStyles.tableHeaderText}>
-                  Popis položky
+                <Text style={invoicePdfStyles.tableHeaderText}>Položka</Text>
+              </View>
+              <View
+                style={[
+                  invoicePdfStyles.tableCell,
+                  invoicePdfStyles.colUnitPrice,
+                ]}
+              >
+                <Text
+                  style={[
+                    invoicePdfStyles.tableHeaderText,
+                    invoicePdfStyles.rightAligned,
+                  ]}
+                >
+                  Cena za MJ
                 </Text>
               </View>
               <View
@@ -656,7 +738,7 @@ export function InvoicePdfDocument({
                     invoicePdfStyles.rightAligned,
                   ]}
                 >
-                  Cena
+                  Celkem
                 </Text>
               </View>
             </View>
@@ -666,13 +748,11 @@ export function InvoicePdfDocument({
                 index === items.length - 1
                   ? [invoicePdfStyles.tableRow, invoicePdfStyles.tableRowLast]
                   : invoicePdfStyles.tableRow;
-              const itemMeta = [
+              const quantity =
                 item.quantity != null
-                  ? `Množství: ${formatNumber(item.quantity)}${item.unit ? ` ${item.unit}` : ""}`
-                  : null,
-                item.unitPrice != null
-                  ? `Cena/ks: ${formatCurrency(item.unitPrice, invoice.currency)}`
-                  : null,
+                  ? `${formatNumber(item.quantity)}${item.unit ? ` ${item.unit}` : ""}`
+                  : null;
+              const itemMeta = [
                 isVatPayer && item.vatRate != null
                   ? `DPH: ${formatNumber(item.vatRate)}%`
                   : null,
@@ -680,6 +760,14 @@ export function InvoicePdfDocument({
 
               return (
                 <View key={item.id} style={rowStyle}>
+                  <View
+                    style={[
+                      invoicePdfStyles.tableCell,
+                      invoicePdfStyles.colQuantity,
+                    ]}
+                  >
+                    <Text style={invoicePdfStyles.mono}>{quantity ?? ""}</Text>
+                  </View>
                   <View
                     style={[
                       invoicePdfStyles.tableCell,
@@ -694,6 +782,21 @@ export function InvoicePdfDocument({
                         {itemMeta.join("   |   ")}
                       </Text>
                     )}
+                  </View>
+                  <View
+                    style={[
+                      invoicePdfStyles.tableCell,
+                      invoicePdfStyles.colUnitPrice,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        invoicePdfStyles.mono,
+                        invoicePdfStyles.rightAligned,
+                      ]}
+                    >
+                      {formatCurrency(item.unitPrice, invoice.currency) ?? ""}
+                    </Text>
                   </View>
                   <View
                     style={[

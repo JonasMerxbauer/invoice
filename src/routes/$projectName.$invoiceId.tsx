@@ -452,7 +452,7 @@ function InvoiceDetailContent() {
       const { generateInvoicePdfBlob } = await import("~/lib/invoice-pdf");
 
       const blob = await generateInvoicePdfBlob({
-        invoice: invoice as any,
+        invoice: { ...invoice, paymentMethodLabel } as any,
         items: items as any,
       });
 
