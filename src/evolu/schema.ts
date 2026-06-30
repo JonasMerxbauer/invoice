@@ -24,6 +24,11 @@ const VatMode = Evolu.union(
   Evolu.literal("reverse-charge"),
 );
 
+const InvoiceNumberingScheme = Evolu.union(
+  Evolu.literal("yearmonthnumber"),
+  Evolu.literal("yearnumber"),
+);
+
 const DigitString = Evolu.regex(
   "DigitString",
   /^\d+$/,
@@ -66,6 +71,7 @@ export const Schema = {
     iban: Evolu.nullOr(Iban),
     swift: Evolu.nullOr(Swift),
     defaultCurrency: Evolu.CurrencyCode,
+    invoiceNumberingScheme: InvoiceNumberingScheme,
     note: Evolu.nullOr(Evolu.TrimmedString1000),
   },
   customer: {

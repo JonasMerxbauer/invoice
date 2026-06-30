@@ -36,6 +36,10 @@ import {
 import { useForm, useStore } from "@tanstack/react-form-start";
 import { cn } from "~/lib/utils";
 import type { CompanyLookupResult } from "~/lib/company-registry";
+import {
+  getNextInvoiceNumber,
+  getProjectInvoiceNumberingScheme,
+} from "~/lib/invoice-numbering";
 import { z } from "zod";
 import { AlertCircle, Plus, Trash2, Save, UserPlus } from "lucide-react";
 import {
@@ -65,7 +69,7 @@ const allCustomers = evolu.createQuery((db) =>
 const allInvoices = evolu.createQuery((db) =>
   db
     .selectFrom("invoice")
-    .select(["id", "invoiceNumber", "projectId"])
+    .select(["invoiceNumber", "projectId"])
     .where("isDeleted", "is", null),
 );
 
@@ -1440,17 +1444,6 @@ function NewInvoiceContent() {
 
   const applyVat = shouldApplyVat(project?.vatMode);
 
-  // Generate next invoice number
-  const nextInvoiceNumber = useMemo(() => {
-    if (!project) return "";
-    const projectInvs = existingInvoices.filter(
-      (inv) => inv.projectId === project.id,
-    );
-    const year = new Date().getFullYear();
-    const num = projectInvs.length + 1;
-    return `${year}${String(num).padStart(4, "0")}`;
-  }, [project, existingInvoices]);
-
   // ── Form state ──────────────────────────────────────────────────
   const today = todayIso();
   const form = useForm({
@@ -1676,6 +1669,17 @@ function NewInvoiceContent() {
   });
   const formValues = useStore(form.store, (state) => state.values);
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+
+  const nextInvoiceNumber = useMemo(() => {
+    if (!project) return "";
+
+    return getNextInvoiceNumber({
+      invoices: existingInvoices,
+      issueDate: formValues.issueDate,
+      projectId: project.id,
+      scheme: getProjectInvoiceNumberingScheme(project),
+    });
+  }, [project, existingInvoices, formValues.issueDate]);
 
   useEffect(() => {
     if (applyVat) return;

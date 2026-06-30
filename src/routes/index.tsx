@@ -63,6 +63,11 @@ const vatModeOptions = [
 
 const currencyOptions = ["CZK", "EUR", "USD"] as const;
 
+const invoiceNumberingSchemeOptions = [
+  { value: "yearmonthnumber", label: "Rok + měsíc + číslo (20260601)" },
+  { value: "yearnumber", label: "Rok + číslo (20260001)" },
+] as const;
+
 function getEffectiveVatMode(
   vatMode: (typeof vatModeOptions)[number]["value"],
   isVatPayer: ProjectFormValues["isVatPayer"],
@@ -89,6 +94,7 @@ type ProjectFormValues = {
   iban: string;
   swift: string;
   defaultCurrency: (typeof currencyOptions)[number];
+  invoiceNumberingScheme: (typeof invoiceNumberingSchemeOptions)[number]["value"];
   note: string;
 };
 
@@ -111,6 +117,7 @@ const emptyProjectFormValues: ProjectFormValues = {
   iban: "",
   swift: "",
   defaultCurrency: "CZK",
+  invoiceNumberingScheme: "yearmonthnumber",
   note: "",
 };
 
@@ -139,6 +146,11 @@ function getProjectFormValues(
     ? project.vatMode
     : "standard";
   const isVatPayer = project.isVatPayer ? "true" : "false";
+  const invoiceNumberingScheme = invoiceNumberingSchemeOptions.some(
+    (option) => option.value === project.invoiceNumberingScheme,
+  )
+    ? project.invoiceNumberingScheme
+    : "yearmonthnumber";
 
   return {
     name: project.name ?? "",
@@ -159,6 +171,7 @@ function getProjectFormValues(
     iban: project.iban ?? "",
     swift: project.swift ?? "",
     defaultCurrency: currency,
+    invoiceNumberingScheme,
     note: project.note ?? "",
   };
 }
@@ -248,6 +261,7 @@ function ProjectDialog({
       iban: toOptionalValue(values.iban)?.toUpperCase() ?? null,
       swift: toOptionalValue(values.swift)?.toUpperCase() ?? null,
       defaultCurrency: values.defaultCurrency as Evolu.CurrencyCode,
+      invoiceNumberingScheme: values.invoiceNumberingScheme,
       note: toOptionalValue(values.note),
     } as any;
 
@@ -400,6 +414,17 @@ function ProjectDialog({
                     value: currency,
                     label: currency,
                   }))}
+                />
+                <ProjectSelect
+                  label="Číslování faktur"
+                  value={values.invoiceNumberingScheme}
+                  onValueChange={(value) =>
+                    handleFieldChange(
+                      "invoiceNumberingScheme",
+                      value as ProjectFormValues["invoiceNumberingScheme"],
+                    )
+                  }
+                  options={invoiceNumberingSchemeOptions}
                 />
               </div>
             </section>
